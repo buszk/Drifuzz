@@ -12,6 +12,23 @@ int msix_init(PCIDevice *dev, unsigned short nentries,
               unsigned table_offset, MemoryRegion *pba_bar,
               uint8_t pba_bar_nr, unsigned pba_offset, uint8_t cap_pos,
               Error **errp);
+/* modified msix_init to expose io */
+int __msix_init(PCIDevice *dev, unsigned short nentries,
+              MemoryRegion *table_bar, uint8_t table_bar_nr,
+              unsigned table_offset, MemoryRegion *pba_bar,
+              uint8_t pba_bar_nr, unsigned pba_offset, uint8_t cap_pos,
+              Error **errp, const MemoryRegionOps *table_mmio_ops,
+              const MemoryRegionOps *pbl_mmio_ops);
+/* Export symbols */
+uint64_t msix_table_mmio_read(void *opaque, hwaddr addr,
+                                   unsigned size);
+void msix_table_mmio_write(void *opaque, hwaddr addr,
+                                uint64_t val, unsigned size);
+uint64_t msix_pba_mmio_read(void *opaque, hwaddr addr,
+                                   unsigned size);
+void msix_pba_mmio_write(void *opaque, hwaddr addr,
+                                uint64_t val, unsigned size);
+
 int msix_init_exclusive_bar(PCIDevice *dev, unsigned short nentries,
                             uint8_t bar_nr, Error **errp);
 

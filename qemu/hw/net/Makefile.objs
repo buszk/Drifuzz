@@ -14,6 +14,9 @@ common-obj-$(CONFIG_RTL8139_PCI) += rtl8139.o
 common-obj-$(CONFIG_VMXNET3_PCI) += net_tx_pkt.o net_rx_pkt.o
 common-obj-$(CONFIG_VMXNET3_PCI) += vmxnet3.o
 
+common-obj-y += alx.o
+common-obj-y += ath10k.o
+
 common-obj-$(CONFIG_SMC91C111) += smc91c111.o
 common-obj-$(CONFIG_LAN9118) += lan9118.o
 common-obj-$(CONFIG_NE2000_ISA) += ne2000-isa.o

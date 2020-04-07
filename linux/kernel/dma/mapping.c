@@ -14,6 +14,7 @@
 #include <linux/of_device.h>
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
+#include <linux/drifuzz.h>
 
 /*
  * Managed DMA API
@@ -283,6 +284,7 @@ void *dma_alloc_attrs(struct device *dev, size_t size, dma_addr_t *dma_handle,
 		return NULL;
 
 	debug_dma_alloc_coherent(dev, size, *dma_handle, cpu_addr);
+    handle_dma_init(*dma_handle, virt_to_phys(cpu_addr), size);
 	return cpu_addr;
 }
 EXPORT_SYMBOL(dma_alloc_attrs);
@@ -311,6 +313,7 @@ void dma_free_attrs(struct device *dev, size_t size, void *cpu_addr,
 		dma_direct_free(dev, size, cpu_addr, dma_handle, attrs);
 	else if (ops->free)
 		ops->free(dev, size, cpu_addr, dma_handle, attrs);
+    handle_dma_exit(dma_handle);
 }
 EXPORT_SYMBOL(dma_free_attrs);
 

@@ -1,0 +1,218 @@
+#include <linux/init.h>
+#include <linux/module.h>
+#include <linux/kernel.h>
+#include <linux/fs.h>
+#include <linux/ioport.h>
+#include <linux/pci.h>
+
+MODULE_LICENSE("GPL");
+MODULE_AUTHOR("Zekun Shen");
+MODULE_DESCRIPTION("A command channel between linux guest and qemu host");
+MODULE_VERSION("0.01");
+
+#define qemu_driver_name "Qemu driver"
+
+static int device_open_count = 0;
+static int major_num;
+#define CMD_ADDR 0x8
+#define CMD_ARG1 0x10
+#define CMD_ARG2 0x18
+#define CMD_ARG3 0x20
+#define ACT 0x1
+
+/* shared */
+enum ACTIONS {
+	DMA_INIT = 1,
+	DMA_EXIT
+};
+
+struct qemu_adapter {
+	void* hw_addr;
+	struct pci_dev *pdev;
+};
+
+static struct qemu_adapter *adapter = NULL;
+
+/* Handler */
+void handle_dma_init(uint64_t dma_addr, uint64_t addr, uint64_t size) {
+	if (adapter) {
+		printk(KERN_INFO "Get dma_init\n");
+		writeq(DMA_INIT, adapter->hw_addr + CMD_ADDR);
+		writeq(dma_addr, adapter->hw_addr + CMD_ARG1);
+		writeq(addr, adapter->hw_addr + CMD_ARG2);
+		writeq(size, adapter->hw_addr + CMD_ARG3);
+		writeq(ACT, adapter->hw_addr);
+	}
+	else {
+		printk(KERN_INFO "Get dma_init: adapter not ready\n");
+	}
+}
+EXPORT_SYMBOL(handle_dma_init);
+
+void handle_dma_exit(uint64_t dma_addr) {
+	if (adapter) {
+		printk(KERN_INFO "Get dma_exit\n");
+		writeq(DMA_EXIT, adapter->hw_addr + CMD_ADDR);
+		writeq(dma_addr, adapter->hw_addr + CMD_ARG1);
+		writeq(ACT, adapter->hw_addr);
+	}
+}
+EXPORT_SYMBOL(handle_dma_exit);
+
+static int handle_command(void* buffer, size_t len) {
+	uint64_t *pbuffer;
+	uint64_t cmd;
+	uint64_t *argv;
+	int argc;
+	size_t nread = 0;
+	pbuffer = (uint64_t *)buffer;
+	if (len == 0 || len % 8) {
+		return -EINVAL;
+	}
+	
+	cmd = *pbuffer;
+	nread += 8;
+	argv = pbuffer + 1;
+	argc = (len - 8) / 8;
+	switch (cmd)
+	{
+	case DMA_INIT:
+		WARN_ON(len != 0x20);
+		handle_dma_init(argv[0], argv[1], argv[2]);
+		return 0x20;
+	case DMA_EXIT:
+		WARN_ON(len != 0x10);
+		handle_dma_exit(argv[0]);
+		return 0x10;
+	default:
+		printk(KERN_INFO "unknow action\n");
+		return 0x4;
+	}
+	return 0;
+}
+
+/* File ops */
+static ssize_t device_write(struct file *flip, const char *buffer, size_t len,
+		loff_t *offset) {
+	//uint64_t *p = (uint64_t*) buffer;
+	int num = 0;
+	void *kbuf = kmalloc(len, GFP_KERNEL);
+	if ((num = copy_from_user(kbuf, buffer, len) != len)) {
+		return -EIO;
+	}
+	if ((num = handle_command(kbuf, len)) == 0) {
+		return -EINVAL;
+	}
+	return num;
+	
+}
+
+static ssize_t device_read(struct file *flip, char *buffer, size_t len, 
+		loff_t *offset) {
+	printk(KERN_ALERT "This operation is not supported.\n");
+	return -EINVAL;
+}
+
+static int device_open(struct inode *inode, struct file *file) {
+	if (device_open_count) {
+		return -EBUSY;
+	}
+	device_open_count++;
+	try_module_get(THIS_MODULE);
+	return 0;
+}
+
+static int device_release(struct inode *inode, struct file *file) {
+	device_open_count--;
+	module_put(THIS_MODULE);
+	return 0;
+}
+
+static struct file_operations file_ops = {
+	.read = device_read,
+	.write = device_write,
+	.open = device_open,
+	.release = device_release
+};
+
+/* File ops end */
+
+/* PCI */
+static int qemu_probe(struct pci_dev *pdev, const struct pci_device_id *ent) {
+	printk(KERN_INFO "Qemu probe\n Hello!\n");
+	int err;
+	dma_addr_t dma_handle;
+	void *const_dma_region;
+	// int bars;
+	//bars = pci_select_bars(pdev, IORESOURCE_MEM | IORESOURCE_IO);
+	if ((err = pci_enable_device(pdev)))
+		return err;
+
+	// if ((err = pci_request_selected_regions(pdev, bars, qemu_driver_name)))
+	// 	goto somewhere1;
+	
+	// pci_set_master(pdev);
+	// if ((err = pci_save_state(pdev))) {
+	// 	goto somewhere2;
+	// }
+	adapter = kmalloc(sizeof(struct qemu_adapter), GFP_KERNEL);
+	adapter->pdev = pdev;
+	adapter->hw_addr = pci_ioremap_bar(pdev, 0);
+	pci_set_drvdata(pdev, adapter);
+
+
+	const_dma_region =
+			dma_alloc_coherent(&pdev->dev, 0x1000, &dma_handle, GFP_KERNEL);
+
+	*(char*)const_dma_region = 'A';
+	*((char*)const_dma_region + 0x111) = 'A';
+	return 0;
+}
+
+static void qemu_remove(struct pci_dev *pdev) {
+	//pci_release_selected_regions(pdev, bars);
+	kfree(pci_get_drvdata(pdev));
+	pci_disable_device(pdev);
+}
+
+static const struct pci_device_id qemu_pci_tbl[] = {
+	{PCI_DEVICE(0x7777, 0x7777)},
+	{}
+};
+static struct pci_driver qemu_driver = {
+	.name 		= qemu_driver_name,
+	.id_table 	= qemu_pci_tbl,
+	.probe 		= qemu_probe,
+	.remove 	= qemu_remove,
+};
+
+/* PCI ends */
+
+/* Module */
+int __init qemu_init_module(void) {
+	int ret;
+	printk(KERN_INFO "Qemu init\n Hello!\n");
+	if ((ret = pci_register_driver(&qemu_driver)) != 0) {
+		printk(KERN_ALERT "Could not register pci: %d\b", ret);
+		return ret;
+	}
+	major_num = register_chrdev(0, qemu_driver_name, &file_ops);
+	if (major_num < 0) {
+		printk(KERN_ALERT "Could not register device: %d\n", major_num);
+		return major_num;
+	} else {
+		printk(KERN_INFO "Qemu module loaded with major %d\n", major_num);
+		return 0;
+	}
+}
+module_init(qemu_init_module);
+
+void __exit qemu_exit_module(void) {
+	unregister_chrdev(major_num, qemu_driver_name);
+	printk(KERN_INFO "Qemu exit\n Goodbye!\n");
+}
+
+module_exit(qemu_exit_module);
+/* Module ends */
+
+// MODULE_SOFTDEP("post: alx");
