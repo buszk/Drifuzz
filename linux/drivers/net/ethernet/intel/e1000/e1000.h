@@ -43,6 +43,8 @@
 #include <linux/ethtool.h>
 #include <linux/if_vlan.h>
 
+#define DPRINT(fmt, ...) do { printk(KERN_INFO "[%s] "fmt"\n", \
+		__FUNCTION__, ##__VA_ARGS__); } while (0)
 #define BAR_0		0
 #define BAR_1		1
 

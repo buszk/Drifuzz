@@ -18,6 +18,8 @@
 #include "lo.h"
 #include "phy_common.h"
 
+#define DPRINT(fmt, ...) do { printk(KERN_INFO "[%s] "fmt"\n", \
+		__FUNCTION__, ##__VA_ARGS__); } while (0)
 
 #ifdef CONFIG_B43_DEBUG
 # define B43_DEBUG	1

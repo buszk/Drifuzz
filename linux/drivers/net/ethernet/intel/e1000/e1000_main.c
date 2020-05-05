@@ -2489,6 +2489,7 @@ static void e1000_watchdog(struct work_struct *work)
 	}
 
 link_up:
+	DPRINT("link_up");
 	e1000_update_stats(adapter);
 
 	hw->tx_packet_delta = adapter->stats.tpt - adapter->tpt_old;
@@ -2503,7 +2504,9 @@ link_up:
 
 	e1000_update_adaptive(hw);
 
+	DPRINT("calling netif_carrier_ok");
 	if (!netif_carrier_ok(netdev)) {
+		DPRINT("netif_carrier_ok: false");
 		if (E1000_DESC_UNUSED(txdr) + 1 < txdr->count) {
 			/* We've lost link, so the controller stops DMA,
 			 * but we've got queued Tx work that's never going
@@ -3491,6 +3494,7 @@ exit:
 static void e1000_tx_timeout(struct net_device *netdev, unsigned int txqueue)
 {
 	struct e1000_adapter *adapter = netdev_priv(netdev);
+	DPRINT("");
 
 	/* Do the reset outside of interrupt context */
 	adapter->tx_timeout_count++;
@@ -4340,6 +4344,7 @@ static bool e1000_clean_rx_irq(struct e1000_adapter *adapter,
 			       struct e1000_rx_ring *rx_ring,
 			       int *work_done, int work_to_do)
 {
+	DPRINT("");
 	struct net_device *netdev = adapter->netdev;
 	struct pci_dev *pdev = adapter->pdev;
 	struct e1000_rx_desc *rx_desc, *next_rxd;
@@ -4450,6 +4455,7 @@ process_skb:
 				  ((u32)(rx_desc->errors) << 24),
 				  le16_to_cpu(rx_desc->csum), skb);
 
+		DPRINT("receive_skb");
 		e1000_receive_skb(adapter, status, rx_desc->special, skb);
 
 next_desc:
@@ -4470,11 +4476,12 @@ next_desc:
 	cleaned_count = E1000_DESC_UNUSED(rx_ring);
 	if (cleaned_count)
 		adapter->alloc_rx_buf(adapter, rx_ring, cleaned_count);
-
+	
 	adapter->total_rx_packets += total_rx_packets;
 	adapter->total_rx_bytes += total_rx_bytes;
 	netdev->stats.rx_bytes += total_rx_bytes;
 	netdev->stats.rx_packets += total_rx_packets;
+	DPRINT("returning with %d cleaned", cleaned_count);
 	return cleaned;
 }
 

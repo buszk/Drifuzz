@@ -901,6 +901,7 @@ static u32 ath10k_pci_targ_cpu_to_ce_addr(struct ath10k *ar, u32 addr)
 static int ath10k_pci_diag_read_mem(struct ath10k *ar, u32 address, void *data,
 				    int nbytes)
 {
+	DPRINT("");
 	struct ath10k_pci *ar_pci = ath10k_pci_priv(ar);
 	int ret = 0;
 	u32 *buf;
@@ -966,6 +967,7 @@ static int ath10k_pci_diag_read_mem(struct ath10k *ar, u32 address, void *data,
 		}
 
 		i = 0;
+		DPRINT("ath10k_ce_completed_recv_next");
 		while (ath10k_ce_completed_recv_next(ce_diag, (void **)&buf,
 						     &completed_nbytes) != 0) {
 			udelay(DIAG_ACCESS_CE_WAIT_US);
@@ -976,17 +978,19 @@ static int ath10k_pci_diag_read_mem(struct ath10k *ar, u32 address, void *data,
 				goto done;
 			}
 		}
+		DPRINT("bytes compare %lx vs %lx", nbytes, completed_nbytes);
 
 		if (nbytes != completed_nbytes) {
 			ret = -EIO;
 			goto done;
 		}
 
+		DPRINT("ce_data compare %x vs %x", *buf, ce_data);
 		if (*buf != ce_data) {
 			ret = -EIO;
 			goto done;
 		}
-
+		DPRINT("copy");
 		remaining_bytes -= nbytes;
 		memcpy(data, data_buf, nbytes);
 
@@ -1130,15 +1134,18 @@ int ath10k_pci_diag_write_mem(struct ath10k *ar, u32 address,
 			}
 		}
 
+		DPRINT("bytes compare %lx vs %lx", nbytes, completed_nbytes);
 		if (nbytes != completed_nbytes) {
 			ret = -EIO;
 			goto done;
 		}
 
+		DPRINT("address compare %x vs %x", *buf, address);
 		if (*buf != address) {
 			ret = -EIO;
 			goto done;
 		}
+		DPRINT("copy");
 
 		remaining_bytes -= nbytes;
 		address += nbytes;

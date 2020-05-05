@@ -170,6 +170,7 @@ static bool alx_clean_tx_irq(struct alx_tx_queue *txq)
 	unsigned int total_bytes = 0, total_packets = 0;
 	int budget = ALX_DEFAULT_TX_WORK;
 
+	printk(KERN_INFO "alx_clean_tx_irq\n");
 	alx = netdev_priv(txq->netdev);
 	tx_queue = alx_get_tx_queue(txq);
 
@@ -177,7 +178,9 @@ static bool alx_clean_tx_irq(struct alx_tx_queue *txq)
 	hw_read_idx = alx_read_mem16(&alx->hw, txq->c_reg);
 
 	if (sw_read_idx != hw_read_idx) {
+		printk(KERN_INFO "alx_clean_tx_irq: loop\n");
 		while (sw_read_idx != hw_read_idx && budget > 0) {
+			//printk(KERN_INFO "alx_clean_tx_irq: loop\n");
 			struct sk_buff *skb;
 
 			skb = txq->bufs[sw_read_idx].skb;
@@ -192,15 +195,18 @@ static bool alx_clean_tx_irq(struct alx_tx_queue *txq)
 			if (++sw_read_idx == txq->count)
 				sw_read_idx = 0;
 		}
+		printk(KERN_INFO "alx_clean_tx_irq: loop end\n");
 		txq->read_idx = sw_read_idx;
 
 		netdev_tx_completed_queue(tx_queue, total_packets, total_bytes);
 	}
 
+	printk(KERN_INFO "alx_clean_tx_irq: if\n");
 	if (netif_tx_queue_stopped(tx_queue) && netif_carrier_ok(alx->dev) &&
 	    alx_tpd_avail(txq) > txq->count / 4)
 		netif_tx_wake_queue(tx_queue);
 
+	printk(KERN_INFO "alx_clean_tx_irq: finished\n");
 	return sw_read_idx == hw_read_idx;
 }
 
@@ -223,6 +229,7 @@ static int alx_clean_rx_irq(struct alx_rx_queue *rxq, int budget)
 	u16 length, rfd_cleaned = 0;
 	int work = 0;
 
+
 	alx = netdev_priv(rxq->netdev);
 
 	while (work < budget) {
@@ -236,6 +243,7 @@ static int alx_clean_rx_irq(struct alx_rx_queue *rxq, int budget)
 		    ALX_GET_FIELD(le32_to_cpu(rrd->word0),
 				  RRD_NOR) != 1) {
 			alx_schedule_reset(alx);
+			printk(KERN_INFO "alx_clean_rx_irq: %d", work);
 			return work;
 		}
 
@@ -291,6 +299,7 @@ next_pkt:
 	if (rfd_cleaned)
 		alx_refill_rx_ring(alx, GFP_ATOMIC);
 
+	printk(KERN_INFO "alx_clean_rx_irq: %d", work);
 	return work;
 }
 
@@ -302,6 +311,8 @@ static int alx_poll(struct napi_struct *napi, int budget)
 	unsigned long flags;
 	bool tx_complete = true;
 	int work = 0;
+
+	printk(KERN_INFO "alx_poll\n");
 
 	if (np->txq)
 		tx_complete = alx_clean_tx_irq(np->txq);
@@ -360,7 +371,8 @@ static irqreturn_t alx_intr_handle(struct alx_priv *alx, u32 intr)
 	struct alx_hw *hw = &alx->hw;
 
 	spin_lock(&alx->irq_lock);
-
+    
+    printk(KERN_INFO "alx_intr_handle\n");
 	/* ACK interrupt */
 	alx_write_mem32(hw, ALX_ISR, intr | ALX_ISR_DIS);
 	intr &= alx->int_mask;
@@ -386,6 +398,7 @@ static irqreturn_t alx_intr_msix_ring(int irq, void *data)
 {
 	struct alx_napi *np = data;
 	struct alx_hw *hw = &np->alx->hw;
+    printk(KERN_INFO "alx_intr_msix_ring\n");
 
 	/* mask interrupt to ACK chip */
 	alx_mask_msix(hw, np->vec_idx, true);
@@ -402,6 +415,7 @@ static irqreturn_t alx_intr_msix_misc(int irq, void *data)
 	struct alx_priv *alx = data;
 	struct alx_hw *hw = &alx->hw;
 	u32 intr;
+    printk(KERN_INFO "alx_instr_msix_misc\n");
 
 	/* mask interrupt to ACK chip */
 	alx_mask_msix(hw, 0, true);
@@ -426,6 +440,7 @@ static irqreturn_t alx_intr_msi(int irq, void *data)
 {
 	struct alx_priv *alx = data;
 
+    printk(KERN_INFO "alx_intr_msi\n");
 	return alx_intr_handle(alx, alx_read_mem32(&alx->hw, ALX_ISR));
 }
 
@@ -434,6 +449,7 @@ static irqreturn_t alx_intr_legacy(int irq, void *data)
 	struct alx_priv *alx = data;
 	struct alx_hw *hw = &alx->hw;
 	u32 intr;
+    printk(KERN_INFO "alx_intr_legacy\n");
 
 	intr = alx_read_mem32(hw, ALX_ISR);
 
@@ -592,6 +608,7 @@ static void __alx_set_rx_mode(struct net_device *netdev)
 
 static void alx_set_rx_mode(struct net_device *netdev)
 {
+	printk(KERN_INFO "alx_set_rx_mode\n");
 	__alx_set_rx_mode(netdev);
 }
 
@@ -829,6 +846,8 @@ static void alx_config_vector_mapping(struct alx_priv *alx)
 
 static int alx_enable_msix(struct alx_priv *alx)
 {
+
+	printk(KERN_INFO "alx_enable_msix\n");
 	int err, num_vec, num_txq, num_rxq;
 
 	num_txq = min_t(int, num_online_cpus(), ALX_MAX_TX_QUEUES);
@@ -918,6 +937,7 @@ static void alx_irq_enable(struct alx_priv *alx)
 	struct alx_hw *hw = &alx->hw;
 	int i;
 
+    printk(KERN_INFO "alx_irq_enable\n");
 	/* level-1 interrupt switch */
 	alx_write_mem32(hw, ALX_ISR, 0);
 	alx_write_mem32(hw, ALX_IMR, alx->int_mask);
@@ -935,6 +955,7 @@ static void alx_irq_disable(struct alx_priv *alx)
 	struct alx_hw *hw = &alx->hw;
 	int i;
 
+    printk(KERN_INFO "alx_irq_disable\n");
 	alx_write_mem32(hw, ALX_ISR, ALX_ISR_DIS);
 	alx_write_mem32(hw, ALX_IMR, 0);
 	alx_post_write(hw);
@@ -1136,6 +1157,7 @@ static void alx_halt(struct alx_priv *alx)
 
 static void alx_configure(struct alx_priv *alx)
 {
+	printk(KERN_INFO "alx_configure\n");
 	struct alx_hw *hw = &alx->hw;
 
 	alx_configure_basic(hw);
@@ -1147,6 +1169,7 @@ static void alx_configure(struct alx_priv *alx)
 
 static void alx_activate(struct alx_priv *alx)
 {
+    printk(KERN_INFO "alx_activate\n");
 	/* hardware setting lost, restore it */
 	alx_reinit_rings(alx);
 	alx_configure(alx);
@@ -1195,6 +1218,7 @@ static int __alx_open(struct alx_priv *alx, bool resume)
 {
 	int err;
 
+    printk(KERN_INFO "__alx_open\n");
 	err = alx_enable_msix(alx);
 	if (err < 0) {
 		err = alx_init_intr(alx);
@@ -1202,19 +1226,24 @@ static int __alx_open(struct alx_priv *alx, bool resume)
 			return err;
 	}
 
+    printk(KERN_INFO "__alx_open:1\n");
 	if (!resume)
 		netif_carrier_off(alx->dev);
 
+    printk(KERN_INFO "__alx_open:2\n");
 	err = alx_alloc_napis(alx);
 	if (err)
 		goto out_disable_adv_intr;
 
+    printk(KERN_INFO "__alx_open:3\n");
 	err = alx_alloc_rings(alx);
 	if (err)
 		goto out_free_rings;
 
+    printk(KERN_INFO "__alx_open:4\n");
 	alx_configure(alx);
 
+    printk(KERN_INFO "__alx_open:5\n");
 	err = alx_request_irq(alx);
 	if (err)
 		goto out_free_rings;
@@ -1223,10 +1252,14 @@ static int __alx_open(struct alx_priv *alx, bool resume)
 	 * if we copy the dma addresses in alx_init_ring_ptrs twice when
 	 * requesting msi-x interrupts failed
 	 */
+    printk(KERN_INFO "__alx_open:6\n");
 	alx_reinit_rings(alx);
 
+    printk(KERN_INFO "__alx_open:7\n");
 	netif_set_real_num_tx_queues(alx->dev, alx->num_txq);
+    printk(KERN_INFO "__alx_open:8\n");
 	netif_set_real_num_rx_queues(alx->dev, alx->num_rxq);
+    printk(KERN_INFO "__alx_open:9\n");
 
 	/* clear old interrupts */
 	alx_write_mem32(&alx->hw, ALX_ISR, ~(u32)ALX_ISR_DIS);
@@ -1280,12 +1313,14 @@ static void alx_check_link(struct alx_priv *alx)
 	int old_speed;
 	int err;
 
+	printk(KERN_INFO "alx_check_link\n");
 	/* clear PHY internal interrupt status, otherwise the main
 	 * interrupt status will be asserted forever
 	 */
 	alx_clear_phy_intr(hw);
 
 	old_speed = hw->link_speed;
+	printk(KERN_INFO "alx_check_link: reading phy link\n");
 	err = alx_read_phy_link(hw);
 	if (err < 0)
 		goto reset;
@@ -1295,10 +1330,12 @@ static void alx_check_link(struct alx_priv *alx)
 	alx_write_mem32(hw, ALX_IMR, alx->int_mask);
 	spin_unlock_irqrestore(&alx->irq_lock, flags);
 
+	printk(KERN_INFO "alx_check_link: Checking speed\n");
 	if (old_speed == hw->link_speed)
 		return;
 
 	if (hw->link_speed != SPEED_UNKNOWN) {
+		printk(KERN_INFO "alx_check_link: Link up\n");
 		netif_info(alx, link, alx->dev,
 			   "NIC Up: %s\n", alx_speed_desc(hw));
 		alx_post_phy_link(hw);
@@ -1308,6 +1345,7 @@ static void alx_check_link(struct alx_priv *alx)
 		if (old_speed == SPEED_UNKNOWN)
 			alx_netif_start(alx);
 	} else {
+		printk(KERN_INFO "alx_check_link: Link down\n");
 		/* link is now down */
 		alx_netif_stop(alx);
 		netif_info(alx, link, alx->dev, "Link Down\n");
@@ -1439,6 +1477,7 @@ static int alx_map_tx_skb(struct alx_tx_queue *txq, struct sk_buff *skb)
 	dma_addr_t dma;
 	int maplen, f, first_idx = txq->write_idx;
 
+	printk(KERN_INFO "alx_map_tx_skb\n");
 	first_tpd = &txq->tpd[txq->write_idx];
 	tpd = first_tpd;
 
@@ -1464,7 +1503,9 @@ static int alx_map_tx_skb(struct alx_tx_queue *txq, struct sk_buff *skb)
 	tpd->adrl.addr = cpu_to_le64(dma);
 	tpd->len = cpu_to_le16(maplen);
 
+	printk(KERN_INFO "alx_map_tx_skb: before loop %d\n", skb_shinfo(skb)->nr_frags);
 	for (f = 0; f < skb_shinfo(skb)->nr_frags; f++) {
+		printk(KERN_INFO "alx_map_tx_skb: loop\n");
 		skb_frag_t *frag = &skb_shinfo(skb)->frags[f];
 
 		if (++txq->write_idx == txq->count)
@@ -1511,25 +1552,29 @@ static netdev_tx_t alx_start_xmit_ring(struct sk_buff *skb,
 	struct alx_txd *first;
 	int tso;
 
+	printk(KERN_INFO "alx_start_xmit_ring\n");
 	alx = netdev_priv(txq->netdev);
 
 	if (alx_tpd_avail(txq) < alx_tpd_req(skb)) {
 		netif_tx_stop_queue(alx_get_tx_queue(txq));
 		goto drop;
 	}
-
+	printk(KERN_INFO "alx_start_xmit_ring:1\n");
 	first = &txq->tpd[txq->write_idx];
 	memset(first, 0, sizeof(*first));
 
+	printk(KERN_INFO "alx_start_xmit_ring:2\n");
 	tso = alx_tso(skb, first);
 	if (tso < 0)
 		goto drop;
 	else if (!tso && alx_tx_csum(skb, first))
 		goto drop;
 
+	printk(KERN_INFO "alx_start_xmit_ring:3\n");
 	if (alx_map_tx_skb(txq, skb) < 0)
 		goto drop;
 
+	printk(KERN_INFO "alx_start_xmit_ring:4\n");
 	netdev_tx_sent_queue(alx_get_tx_queue(txq), skb->len);
 
 	/* flush updates before updating hardware */
@@ -1549,12 +1594,15 @@ drop:
 static netdev_tx_t alx_start_xmit(struct sk_buff *skb,
 				  struct net_device *netdev)
 {
+	printk(KERN_INFO "alx_start_xmit\n");
 	struct alx_priv *alx = netdev_priv(netdev);
 	return alx_start_xmit_ring(skb, alx_tx_queue_mapping(alx, skb));
 }
 
 static void alx_tx_timeout(struct net_device *dev, unsigned int txqueue)
 {
+
+	printk(KERN_INFO "alx_tx_timeout\n");
 	struct alx_priv *alx = netdev_priv(dev);
 
 	alx_schedule_reset(alx);

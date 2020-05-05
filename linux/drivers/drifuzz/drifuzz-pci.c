@@ -22,8 +22,13 @@ static int major_num;
 
 /* shared */
 enum ACTIONS {
-	DMA_INIT = 1,
-	DMA_EXIT
+	CONST_DMA_INIT = 1,
+	CONST_DMA_EXIT,
+	STREAM_DMA_INIT,
+	STREAM_DMA_EXIT,
+    EXEC_INIT,
+    EXEC_EXIT,
+    SUBMIT_STAGE
 };
 
 struct qemu_adapter {
@@ -34,30 +39,74 @@ struct qemu_adapter {
 static struct qemu_adapter *adapter = NULL;
 
 /* Handler */
-void handle_dma_init(uint64_t dma_addr, uint64_t addr, uint64_t size) {
+void handle_const_dma_init(uint64_t dma_addr, uint64_t addr, uint64_t size) {
 	if (adapter) {
-		printk(KERN_INFO "Get dma_init\n");
-		writeq(DMA_INIT, adapter->hw_addr + CMD_ADDR);
+		//printk(KERN_INFO "Get dma_init\n");
+		writeq(CONST_DMA_INIT, adapter->hw_addr + CMD_ADDR);
 		writeq(dma_addr, adapter->hw_addr + CMD_ARG1);
 		writeq(addr, adapter->hw_addr + CMD_ARG2);
 		writeq(size, adapter->hw_addr + CMD_ARG3);
 		writeq(ACT, adapter->hw_addr);
 	}
 	else {
-		printk(KERN_INFO "Get dma_init: adapter not ready\n");
+		//printk(KERN_INFO "Get dma_init: adapter not ready\n");
 	}
 }
-EXPORT_SYMBOL(handle_dma_init);
+EXPORT_SYMBOL(handle_const_dma_init);
 
-void handle_dma_exit(uint64_t dma_addr) {
+void handle_const_dma_exit(uint64_t dma_addr) {
 	if (adapter) {
-		printk(KERN_INFO "Get dma_exit\n");
-		writeq(DMA_EXIT, adapter->hw_addr + CMD_ADDR);
+		// printk(KERN_INFO "Get dma_exit\n");
+		writeq(CONST_DMA_EXIT, adapter->hw_addr + CMD_ADDR);
 		writeq(dma_addr, adapter->hw_addr + CMD_ARG1);
 		writeq(ACT, adapter->hw_addr);
 	}
 }
-EXPORT_SYMBOL(handle_dma_exit);
+EXPORT_SYMBOL(handle_const_dma_exit);
+void handle_stream_dma_init(uint64_t dma_addr, uint64_t addr, uint64_t size) {
+	if (adapter) {
+		//printk(KERN_INFO "Get dma_init\n");
+		writeq(CONST_DMA_INIT, adapter->hw_addr + CMD_ADDR);
+		writeq(dma_addr, adapter->hw_addr + CMD_ARG1);
+		writeq(addr, adapter->hw_addr + CMD_ARG2);
+		writeq(size, adapter->hw_addr + CMD_ARG3);
+		writeq(ACT, adapter->hw_addr);
+	}
+	else {
+		//printk(KERN_INFO "Get dma_init: adapter not ready\n");
+	}
+}
+EXPORT_SYMBOL(handle_stream_dma_init);
+
+void handle_stream_dma_exit(uint64_t dma_addr) {
+	if (adapter) {
+		// printk(KERN_INFO "Get dma_exit\n");
+		writeq(CONST_DMA_EXIT, adapter->hw_addr + CMD_ADDR);
+		writeq(dma_addr, adapter->hw_addr + CMD_ARG1);
+		writeq(ACT, adapter->hw_addr);
+	}
+}
+EXPORT_SYMBOL(handle_stream_dma_exit);
+
+static void handle_exec_init(void) {
+    if (adapter) {
+        writeq(EXEC_INIT, adapter->hw_addr + CMD_ADDR);
+		writeq(ACT, adapter->hw_addr);
+    }
+}
+static void handle_exec_exit(void) {
+    if (adapter) {
+        writeq(EXEC_EXIT, adapter->hw_addr + CMD_ADDR);
+		writeq(ACT, adapter->hw_addr);
+    }
+}
+static void handle_submit_stage(uint64_t stage) {
+    if (adapter) {
+        writeq(EXEC_EXIT, adapter->hw_addr + CMD_ADDR);
+        writeq(stage, adapter->hw_addr + CMD_ARG1);
+		writeq(ACT, adapter->hw_addr);
+    }
+}
 
 static int handle_command(void* buffer, size_t len) {
 	uint64_t *pbuffer;
@@ -76,14 +125,34 @@ static int handle_command(void* buffer, size_t len) {
 	argc = (len - 8) / 8;
 	switch (cmd)
 	{
-	case DMA_INIT:
+	case CONST_DMA_INIT:
 		WARN_ON(len != 0x20);
-		handle_dma_init(argv[0], argv[1], argv[2]);
+		handle_const_dma_init(argv[0], argv[1], argv[2]);
 		return 0x20;
-	case DMA_EXIT:
+	case CONST_DMA_EXIT:
 		WARN_ON(len != 0x10);
-		handle_dma_exit(argv[0]);
+		handle_const_dma_exit(argv[0]);
 		return 0x10;
+	case STREAM_DMA_INIT:
+		WARN_ON(len != 0x20);
+		handle_stream_dma_init(argv[0], argv[1], argv[2]);
+		return 0x20;
+	case STREAM_DMA_EXIT:
+		WARN_ON(len != 0x10);
+		handle_stream_dma_exit(argv[0]);
+		return 0x10;
+    case EXEC_INIT:
+        WARN_ON(len!= 0x8);
+        handle_exec_init();
+        return 0x8;
+    case EXEC_EXIT:
+        WARN_ON(len!= 0x8);
+        handle_exec_exit();
+        return 0x8;
+    case SUBMIT_STAGE:
+        WARN_ON(len!= 0x10);
+        handle_submit_stage(argv[0]);
+        return 0x10;
 	default:
 		printk(KERN_INFO "unknow action\n");
 		return 0x4;
@@ -97,7 +166,7 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len,
 	//uint64_t *p = (uint64_t*) buffer;
 	int num = 0;
 	void *kbuf = kmalloc(len, GFP_KERNEL);
-	if ((num = copy_from_user(kbuf, buffer, len) != len)) {
+	if (copy_from_user(kbuf, buffer, len)) {
 		return -EIO;
 	}
 	if ((num = handle_command(kbuf, len)) == 0) {
@@ -214,5 +283,3 @@ void __exit qemu_exit_module(void) {
 
 module_exit(qemu_exit_module);
 /* Module ends */
-
-// MODULE_SOFTDEP("post: alx");

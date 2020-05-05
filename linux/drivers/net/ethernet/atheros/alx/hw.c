@@ -1033,6 +1033,7 @@ void alx_configure_basic(struct alx_hw *hw)
 
 void alx_mask_msix(struct alx_hw *hw, int index, bool mask)
 {
+	printk(KERN_INFO, "alx_mask_msix\n");
 	u32 reg, val;
 
 	reg = ALX_MSIX_ENTRY_BASE + index * PCI_MSIX_ENTRY_SIZE +

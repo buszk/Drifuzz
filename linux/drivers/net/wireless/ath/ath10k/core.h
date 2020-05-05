@@ -28,6 +28,9 @@
 #include "wow.h"
 #include "swap.h"
 
+#define DPRINT(fmt, ...) do { printk(KERN_INFO "[%s] "fmt"\n", \
+		__FUNCTION__, ##__VA_ARGS__); } while (0)
+
 #define MS(_v, _f) (((_v) & _f##_MASK) >> _f##_LSB)
 #define SM(_v, _f) (((_v) << _f##_LSB) & _f##_MASK)
 #define WO(_f)      ((_f##_OFFSET) >> 2)

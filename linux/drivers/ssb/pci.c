@@ -23,6 +23,8 @@
 #include <linux/pci.h>
 #include <linux/delay.h>
 
+#define DPRINT(fmt, ...) do { printk(KERN_INFO "[%s] "fmt"\n", \
+		__FUNCTION__, ##__VA_ARGS__); } while (0)
 
 /* Define the following to 1 to enable a printk on each coreswitch. */
 #define SSB_VERBOSE_PCICORESWITCH_DEBUG		0
@@ -262,6 +264,7 @@ static int sprom_check_crc(const u16 *sprom, size_t size)
 	crc = ssb_sprom_crc(sprom, size);
 	tmp = sprom[size - 1] & SSB_SPROM_REVISION_CRC;
 	expected_crc = tmp >> SSB_SPROM_REVISION_CRC_SHIFT;
+	DPRINT("CRC: %x expected: %x", crc, expected_crc);
 	if (crc != expected_crc)
 		return -EPROTO;
 
@@ -935,10 +938,12 @@ int ssb_pci_get_invariants(struct ssb_bus *bus,
 			   struct ssb_init_invariants *iv)
 {
 	int err;
+	DPRINT("ssb_pci_sprom_get");
 
 	err = ssb_pci_sprom_get(bus, &iv->sprom);
 	if (err)
 		goto out;
+	DPRINT("ssb_pci_get_boardinfo");
 	ssb_pci_get_boardinfo(bus, &iv->boardinfo);
 
 out:

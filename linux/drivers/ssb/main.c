@@ -25,6 +25,8 @@
 #include <pcmcia/cistpl.h>
 #include <pcmcia/ds.h>
 
+#define DPRINT(fmt, ...) do { printk(KERN_INFO "[%s] "fmt"\n", \
+		__FUNCTION__, ##__VA_ARGS__); } while (0)
 
 MODULE_DESCRIPTION("Sonics Silicon Backplane driver");
 MODULE_LICENSE("GPL");
@@ -627,11 +629,13 @@ ssb_bus_register(struct ssb_bus *bus,
 #endif
 
 	/* Powerup the bus */
+	DPRINT("Powerup");
 	err = ssb_pci_xtal(bus, SSB_GPIO_XTAL | SSB_GPIO_PLL, 1);
 	if (err)
 		goto out;
 
 	/* Init SDIO-host device (if any), before the scan */
+	DPRINT("Init sdio");
 	err = ssb_sdio_init(bus);
 	if (err)
 		goto err_disable_xtal;
@@ -639,26 +643,31 @@ ssb_bus_register(struct ssb_bus *bus,
 	ssb_buses_lock();
 	bus->busnumber = next_busnumber;
 	/* Scan for devices (cores) */
+	DPRINT("Scan bus");
 	err = ssb_bus_scan(bus, baseaddr);
 	if (err)
 		goto err_sdio_exit;
 
 	/* Init PCI-host device (if any) */
+	DPRINT("Init pci-host");
 	err = ssb_pci_init(bus);
 	if (err)
 		goto err_unmap;
 	/* Init PCMCIA-host device (if any) */
+	DPRINT("Init pcmcia");
 	err = ssb_pcmcia_init(bus);
 	if (err)
 		goto err_pci_exit;
 
 	/* Initialize basic system devices (if available) */
+	DPRINT("Init bus power");
 	err = ssb_bus_powerup(bus, 0);
 	if (err)
 		goto err_pcmcia_exit;
 	ssb_chipcommon_init(&bus->chipco);
 	ssb_extif_init(&bus->extif);
 	ssb_mipscore_init(&bus->mipscore);
+	DPRINT("fetch invaiants");
 	err = ssb_fetch_invariants(bus, get_invariants);
 	if (err) {
 		ssb_bus_may_powerdown(bus);
@@ -671,6 +680,7 @@ ssb_bus_register(struct ssb_bus *bus,
 	list_add_tail(&bus->list, &attach_queue);
 	if (!ssb_is_early_boot) {
 		/* This is not early boot, so we must attach the bus now */
+		DPRINT("attach queued busses");
 		err = ssb_attach_queued_buses();
 		if (err)
 			goto err_dequeue;
@@ -678,6 +688,7 @@ ssb_bus_register(struct ssb_bus *bus,
 	next_busnumber++;
 	ssb_buses_unlock();
 
+	DPRINT("end");
 out:
 	return err;
 
@@ -989,6 +1000,7 @@ static u32 ssb_tmslow_reject_bitmask(struct ssb_device *dev)
 
 int ssb_device_is_enabled(struct ssb_device *dev)
 {
+	DPRINT("");
 	u32 val;
 	u32 reject;
 
@@ -1015,7 +1027,7 @@ static void ssb_flush_tmslow(struct ssb_device *dev)
 void ssb_device_enable(struct ssb_device *dev, u32 core_specific_flags)
 {
 	u32 val;
-
+	DPRINT("");
 	ssb_device_disable(dev, core_specific_flags);
 	ssb_write32(dev, SSB_TMSLOW,
 		    SSB_TMSLOW_RESET | SSB_TMSLOW_CLOCK |
@@ -1040,6 +1052,7 @@ void ssb_device_enable(struct ssb_device *dev, u32 core_specific_flags)
 	ssb_write32(dev, SSB_TMSLOW, SSB_TMSLOW_CLOCK |
 		    core_specific_flags);
 	ssb_flush_tmslow(dev);
+	DPRINT("end");
 }
 EXPORT_SYMBOL(ssb_device_enable);
 
@@ -1072,6 +1085,7 @@ static int ssb_wait_bits(struct ssb_device *dev, u16 reg, u32 bitmask,
 void ssb_device_disable(struct ssb_device *dev, u32 core_specific_flags)
 {
 	u32 reject, val;
+	DPRINT("");
 
 	if (ssb_read32(dev, SSB_TMSLOW) & SSB_TMSLOW_RESET)
 		return;
