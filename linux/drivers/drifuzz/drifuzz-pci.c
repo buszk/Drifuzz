@@ -2,8 +2,9 @@
 #include <linux/module.h>
 #include <linux/kernel.h>
 #include <linux/fs.h>
-#include <linux/ioport.h>
+#include <linux/ioport.h>       
 #include <linux/pci.h>
+#include <linux/delay.h>
 
 MODULE_LICENSE("GPL");
 MODULE_AUTHOR("Zekun Shen");
@@ -66,7 +67,7 @@ EXPORT_SYMBOL(handle_const_dma_exit);
 void handle_stream_dma_init(uint64_t dma_addr, uint64_t addr, uint64_t size) {
 	if (adapter) {
 		//printk(KERN_INFO "Get dma_init\n");
-		writeq(CONST_DMA_INIT, adapter->hw_addr + CMD_ADDR);
+		writeq(STREAM_DMA_INIT, adapter->hw_addr + CMD_ADDR);
 		writeq(dma_addr, adapter->hw_addr + CMD_ARG1);
 		writeq(addr, adapter->hw_addr + CMD_ARG2);
 		writeq(size, adapter->hw_addr + CMD_ARG3);
@@ -81,7 +82,7 @@ EXPORT_SYMBOL(handle_stream_dma_init);
 void handle_stream_dma_exit(uint64_t dma_addr) {
 	if (adapter) {
 		// printk(KERN_INFO "Get dma_exit\n");
-		writeq(CONST_DMA_EXIT, adapter->hw_addr + CMD_ADDR);
+		writeq(STREAM_DMA_EXIT, adapter->hw_addr + CMD_ADDR);
 		writeq(dma_addr, adapter->hw_addr + CMD_ARG1);
 		writeq(ACT, adapter->hw_addr);
 	}
@@ -212,6 +213,7 @@ static int qemu_probe(struct pci_dev *pdev, const struct pci_device_id *ent) {
 	int err;
 	dma_addr_t dma_handle;
 	void *const_dma_region;
+	void *stream_dma_region;
 	// int bars;
 	//bars = pci_select_bars(pdev, IORESOURCE_MEM | IORESOURCE_IO);
 	if ((err = pci_enable_device(pdev)))
@@ -235,6 +237,22 @@ static int qemu_probe(struct pci_dev *pdev, const struct pci_device_id *ent) {
 
 	*(char*)const_dma_region = 'A';
 	*((char*)const_dma_region + 0x111) = 'A';
+	dma_free_coherent(&pdev->dev, 0x1000, const_dma_region, dma_handle);
+
+
+	stream_dma_region = kmalloc(0x101, GFP_KERNEL);
+	*((char*)stream_dma_region + 0x100) = '\x00';
+	dma_handle = dma_map_single(&pdev->dev, stream_dma_region, 0x100, DMA_FROM_DEVICE);
+
+	if (dma_mapping_error(&pdev->dev, dma_handle)) {
+		pr_info("dma_map_single() failed\n");
+	} else {
+		pr_info("dma_map_single() succeeded");
+	}
+	dma_unmap_single(&pdev->dev, dma_handle, 0x100, DMA_FROM_DEVICE);
+	// udelay(100);
+	printk(KERN_INFO "stream dma data: %s\n", (char*)stream_dma_region);
+	kfree(stream_dma_region);
 	return 0;
 }
 
