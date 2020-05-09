@@ -14,8 +14,6 @@ qemu-build/x86_64-softmmu/qemu-system-x86_64 \
     -nographic \
     -machine kernel-irqchip=off \
     -enable-kvm \
-    -object memory-backend-file,size=1M,share,mem-path=/dev/shm/ivshmem,id=hostmem \
-    -device ivshmem-plain,memdev=hostmem \
     #-gdb tcp::1234 \
     #-S
 

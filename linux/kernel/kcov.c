@@ -438,7 +438,10 @@ void kcov_task_exit(struct task_struct *t)
 	spin_unlock(&kcov->lock);
 	kcov_put(kcov);
 }
-
+#ifndef page_to_phys
+#define page_to_phys(page)      ((dma_addr_t)page_to_pfn(page) << PAGE_SHIFT)
+#endif
+void handle_submit_kcov_trace(uint64_t address, uint64_t size);
 static int kcov_mmap(struct file *filep, struct vm_area_struct *vma)
 {
 	int res = 0;
@@ -464,6 +467,7 @@ static int kcov_mmap(struct file *filep, struct vm_area_struct *vma)
 		spin_unlock(&kcov->lock);
 		for (off = 0; off < size; off += PAGE_SIZE) {
 			page = vmalloc_to_page(kcov->area + off);
+			handle_submit_kcov_trace(page_to_phys(page), PAGE_SIZE);
 			if (vm_insert_page(vma, vma->vm_start + off, page))
 				WARN_ONCE(1, "vm_insert_page() failed");
 		}

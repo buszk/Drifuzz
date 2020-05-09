@@ -31,6 +31,9 @@ echo "nameserver 8.8.8.8" | sudo tee -a $DIR/etc/resolve.conf
 echo "syzkaller" | sudo tee $DIR/etc/hostname
 else
 # Build a disk image
+if [ -f driver ]; then
+    sudo cp driver chroot/root
+fi
 dd if=/dev/zero of=$RELEASE.img bs=1M seek=$SEEK count=1
 sudo mkfs.ext4 -F $RELEASE.img
 sudo mkdir -p /mnt/$DIR

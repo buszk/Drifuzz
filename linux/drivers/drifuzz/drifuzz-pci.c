@@ -29,7 +29,9 @@ enum ACTIONS {
 	STREAM_DMA_EXIT,
     EXEC_INIT,
     EXEC_EXIT,
-    SUBMIT_STAGE
+    SUBMIT_STAGE,
+	SUBMIT_KCOV_TRACE,
+	KASAN,
 };
 
 struct qemu_adapter {
@@ -103,10 +105,26 @@ static void handle_exec_exit(void) {
 }
 static void handle_submit_stage(uint64_t stage) {
     if (adapter) {
-        writeq(EXEC_EXIT, adapter->hw_addr + CMD_ADDR);
+        writeq(SUBMIT_STAGE, adapter->hw_addr + CMD_ADDR);
         writeq(stage, adapter->hw_addr + CMD_ARG1);
 		writeq(ACT, adapter->hw_addr);
     }
+}
+void handle_submit_kcov_trace(uint64_t address, uint64_t size) {
+    if (adapter) {
+        writeq(SUBMIT_KCOV_TRACE, adapter->hw_addr + CMD_ADDR);
+        writeq(virt_to_phys(address), adapter->hw_addr + CMD_ARG1);
+		writeq(size, adapter->hw_addr + CMD_ARG2);
+		writeq(ACT, adapter->hw_addr);
+    }
+}
+EXPORT_SYMBOL(handle_submit_kcov_trace);
+
+void handle_kasan(void) {
+	if (adapter) {
+        writeq(KASAN, adapter->hw_addr + CMD_ADDR);
+		writeq(ACT, adapter->hw_addr);
+	}
 }
 
 static int handle_command(void* buffer, size_t len) {
@@ -154,8 +172,12 @@ static int handle_command(void* buffer, size_t len) {
         WARN_ON(len!= 0x10);
         handle_submit_stage(argv[0]);
         return 0x10;
+	case SUBMIT_KCOV_TRACE:
+		WARN_ON(len!= 0x18);
+		handle_submit_kcov_trace(argv[0], argv[1]);
+		return 0x18;
 	default:
-		printk(KERN_INFO "unknow action\n");
+		printk(KERN_INFO "Unknow action\n");
 		return 0x4;
 	}
 	return 0;
