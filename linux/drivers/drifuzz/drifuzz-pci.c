@@ -121,11 +121,14 @@ void handle_submit_kcov_trace(uint64_t address, uint64_t size) {
 EXPORT_SYMBOL(handle_submit_kcov_trace);
 
 void handle_kasan(void) {
+	printk(KERN_INFO "handle_kasan\n");
 	if (adapter) {
+		printk(KERN_INFO "available adapter\n");
         writeq(KASAN, adapter->hw_addr + CMD_ADDR);
 		writeq(ACT, adapter->hw_addr);
 	}
 }
+EXPORT_SYMBOL(handle_kasan);
 
 static int handle_command(void* buffer, size_t len) {
 	uint64_t *pbuffer;

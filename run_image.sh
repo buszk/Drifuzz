@@ -8,9 +8,9 @@ qemu-build/x86_64-softmmu/qemu-system-x86_64 \
     -append "console=ttyS0 nokaslr root=/dev/sda earlyprintk=serial" \
     -m 1G \
     -snapshot \
-    -device drifuzz\
-    -net user\
-    -net nic,model=alx\
+    -device drifuzz \
+    -net user \
+    -net nic,model=alx \
     -nographic \
     -machine kernel-irqchip=off \
     -enable-kvm \

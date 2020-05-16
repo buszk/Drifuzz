@@ -66,20 +66,28 @@ int main(int argc, char **argv) {
   system("[ -e /dev/drifuzz ] || mknod /dev/drifuzz c 248 0");
 
   for (int i = 0; i < 100; i++) {
-    if (ioctl(fd, KCOV_ENABLE, KCOV_TRACE_PC))
-      perror("ioctl"), exit(1);
-    __atomic_store_n(&cover[0], 0, __ATOMIC_RELAXED);
-    exec_init();
     system("modprobe alx");
+    
     system("ip link set dev enp0s3 up");
-    sleep(3);
     system("ip link set dev enp0s3 down");
+    for (int i = 0; i < 100; i++) {
+      exec_init();
+      if (ioctl(fd, KCOV_ENABLE, KCOV_TRACE_PC))
+        perror("ioctl"), exit(1);
+      __atomic_store_n(&cover[0], 0, __ATOMIC_RELAXED);
+
+      system("ip link set dev enp0s3 up");
+      system("sleep 5");
+      system("ip link set dev enp0s3 down");
+
+      n = __atomic_load_n(&cover[0], __ATOMIC_RELAXED);
+      printf("%ld traces detected first: %lx\n", n, __atomic_load_n(&cover[1], __ATOMIC_RELAXED));
+
+      if (ioctl(fd, KCOV_DISABLE, 0))
+        perror("ioctl"), exit(1);
+      exec_exit();
+    }
     system("rmmod alx");
-    if (ioctl(fd, KCOV_DISABLE, 0))
-      perror("ioctl"), exit(1);
-    n = __atomic_load_n(&cover[0], __ATOMIC_RELAXED);
-    printf("%ld traces detected first: %lx\n", n, __atomic_load_n(&cover[1], __ATOMIC_RELAXED));
-    exec_exit();
   }
 
   /* Free resources. */

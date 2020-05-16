@@ -554,5 +554,6 @@ void kasan_non_canonical_hook(unsigned long addr)
 		bug_type = "maybe wild-memory-access";
 	pr_alert("KASAN: %s in range [0x%016lx-0x%016lx]\n", bug_type,
 		 orig_addr, orig_addr + KASAN_SHADOW_MASK);
+	handle_kasan();
 }
 #endif

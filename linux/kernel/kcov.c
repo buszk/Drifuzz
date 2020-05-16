@@ -86,6 +86,14 @@ static DEFINE_SPINLOCK(kcov_remote_lock);
 static DEFINE_HASHTABLE(kcov_remote_map, 4);
 static struct list_head kcov_remote_areas = LIST_HEAD_INIT(kcov_remote_areas);
 
+
+/* Size of the kcov_area: */
+static unsigned int		 	_kcov_size = 0;
+/* Buffer for coverage collection: */
+static void					*_kcov_area = NULL;
+/* Task struct where kcov is enabled */
+static struct task_struct 	*_t = NULL;
+
 /* Must be called with kcov_remote_lock locked. */
 static struct kcov_remote *kcov_remote_find(u64 handle)
 {
@@ -182,15 +190,21 @@ void notrace __sanitizer_cov_trace_pc(void)
 	unsigned long *area;
 	unsigned long ip = canonicalize_ip(_RET_IP_);
 	unsigned long pos;
-
+	unsigned int size;
 	t = current;
-	if (!check_kcov_mode(KCOV_MODE_TRACE_PC, t))
+	/* Drifuzz */
+	if (!_kcov_area) 
 		return;
+	area = _kcov_area;
+	size = _kcov_size;
+	// if (!check_kcov_mode(KCOV_MODE_TRACE_PC, t))
+	// 	return;
 
-	area = t->kcov_area;
+	// area = t->kcov_area;
+	// kcov_size = t->kcov_size;
 	/* The first 64-bit word is the number of subsequent PCs. */
 	pos = READ_ONCE(area[0]) + 1;
-	if (likely(pos < t->kcov_size)) {
+	if (likely(pos < size)) {
 		area[pos] = ip;
 		WRITE_ONCE(area[0], pos);
 	}
@@ -319,6 +333,10 @@ static void kcov_start(struct task_struct *t, unsigned int size,
 	/* Cache in task struct for performance. */
 	t->kcov_size = size;
 	t->kcov_area = area;
+	/* Driffuzz */
+	_kcov_size = size;
+	_kcov_area = area;
+	_t = t;
 	/* See comment in check_kcov_mode(). */
 	barrier();
 	WRITE_ONCE(t->kcov_mode, mode);
@@ -329,6 +347,12 @@ static void kcov_stop(struct task_struct *t)
 {
 	WRITE_ONCE(t->kcov_mode, KCOV_MODE_DISABLED);
 	barrier();
+	/* Driffuzz */
+	if (t ==_t) {
+		_kcov_size = 0;
+		_kcov_area = NULL;
+		_t = NULL;
+	}
 	t->kcov_size = 0;
 	t->kcov_area = NULL;
 }

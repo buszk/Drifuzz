@@ -38,6 +38,12 @@
 #include "reg.h"
 #include "hw.h"
 
+// #undef udelay
+// static inline void udelay(unsigned long usecs) {}
+
+// #undef mdelay
+// static inline void mdelay(unsigned long msecs) {}
+
 static inline bool alx_is_rev_a(u8 rev)
 {
 	return rev == ALX_REV_A0 || rev == ALX_REV_A1;
@@ -1033,7 +1039,7 @@ void alx_configure_basic(struct alx_hw *hw)
 
 void alx_mask_msix(struct alx_hw *hw, int index, bool mask)
 {
-	printk(KERN_INFO, "alx_mask_msix\n");
+	printk(KERN_INFO "alx_mask_msix\n");
 	u32 reg, val;
 
 	reg = ALX_MSIX_ENTRY_BASE + index * PCI_MSIX_ENTRY_SIZE +
