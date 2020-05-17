@@ -65,7 +65,7 @@ class qemu:
         self.payload_filename   = "/dev/shm/kafl_qemu_payload_" + self.qemu_id
         self.binary_filename    = "/dev/shm/kafl_qemu_binary_"  + self.qemu_id
         self.argv_filename      = "/dev/shm/kafl_argv_"         + self.qemu_id
-        self.bitmap_filename    = "/dev/shm/kafl_bitmap_"       + self.qemu_id
+        self.bitmap_filename    = "/dev/shm/drifuzz_bitmap_"       + self.qemu_id
         self.socket_path        = "/tmp/drifuzz_socket_"        + self.qemu_id
         # if self.config.argument_values.has_key('work_dir'):
         #     self.control_filename   = self.config.argument_values['work_dir'] + "/kafl_qemu_control_"  + self.qemu_id
