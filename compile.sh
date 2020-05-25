@@ -96,7 +96,7 @@ fi
 # build image
 if [ "$BUILD_IMAGE" = 1 ]; then
 pushd $PWD
-sudo make INSTALL_MOD_PATH=image/chroot -C linux-module-build -j4 modules_install
+sudo make INSTALL_MOD_PATH=$PWD/image/chroot -C linux-module-build -j4 modules_install
 (cd image && make && ./build-image.sh)
 popd
 fi
