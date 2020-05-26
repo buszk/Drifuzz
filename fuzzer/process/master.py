@@ -90,7 +90,8 @@ class MasterProcess:
         # if not self.config.load_old_state:
             # self.kafl_state.runtime = time.time()
         self.kafl_state.runtime = time.time()
-        # send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
+        print('KAFL_TAG_OUTPUT')
+        send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
 
 
     def __bitflip_handler(self, payload, no_data=False, affected_bytes=None):
@@ -170,16 +171,18 @@ class MasterProcess:
         send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)     
 
     def __master_handler(self):
-        print('master_handler')
+        log_master('master_handler %s %f' %( self.mapserver_status_pending, time.time() - self.start))
         if (time.time() - self.start) >= self.refresh_rate and not self.mapserver_status_pending:
+            log_master('ticking')
+            self.mapserver_status_pending = True
             send_msg(KAFL_TAG_MAP_INFO, None, self.comm.to_mapserver_queue)
             end = time.time()
-            #self.kafl_state.performance = int(((self.counter * 1.0) / (end - self.start)))
-            self.kafl_state.performance_rb.append(int(((self.counter * 1.0) / (end - self.start))))
-            self.kafl_state.max_performance_rb.append(int(((self.counter * 1.0) / (end - self.start))))
+            self.kafl_state.performance = ((self.counter * 1.0) / (end - self.start))
+            log_master('performance %d')
+            self.kafl_state.performance_rb.append(((self.counter * 1.0) / (end - self.start)))
+            self.kafl_state.max_performance_rb.append(((self.counter * 1.0) / (end - self.start)))
             self.start = time.time()
             self.counter = 0
-            self.mapserver_status_pending = True
 
         while True:
             msg = recv_msg(self.comm.to_master_queue)

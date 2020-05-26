@@ -135,9 +135,9 @@ class InfoConfiguration:
 
     __config_section = "Fuzzer"
     __config_default = {"UI_REFRESH_RATE": 0.25,
-                      "MASTER_SHM_PREFIX": "kafl_master_",
-                      "MAPSERV_SHM_PREFIX": "kafl_mapserver_",
-                      "BITMAP_SHM_PREFIX": "kafl_bitmap_",
+                      "MASTER_SHM_PREFIX": "drifuzz_master_",
+                      "MAPSERV_SHM_PREFIX": "drifuzz_mapserver_",
+                      "BITMAP_SHM_PREFIX": "drifuzz_bitmap_",
                       "PAYLOAD_SHM_SIZE": (65 << 10),
                       "BITMAP_SHM_SIZE": (64 << 10),
                       "QEMU_KAFL_LOCATION": None,

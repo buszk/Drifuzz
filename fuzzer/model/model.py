@@ -1,26 +1,27 @@
 import time
+import os
+import mmap
+from struct import unpack
 from .seed import Seed
 from .bitmap import Bitmap
-from struct import unpack
-# from process.slave import SlaveThread
 
 class Model(object):
 
-    # slave:SlaveThread = None
-    slave = None
-    # seed:Seed = None
-    bitmap:Bitmap = None
     log:[str] = []
-    cnt = 1
+    # cnt = 1
     payload:bytearray = None
     payload_len:int = 0
     cur = 0
 
-    def __init__(self, slave):
-        # TODO different seed file
-        # self.bitmap = Bitmap()
-        self.slave = slave
+    log_file = None
 
+    def __init__(self, config, req_payload_cb, submit_res_cb):
+        self.req_payload_cb = req_payload_cb
+        self.submit_res_cb = submit_res_cb
+        self.log_file = open('rw.log', 'w')
+
+    def __del__(self):
+        self.log_file.close()
 
     def get_data(self, size):
         if self.payload is None:
@@ -63,15 +64,16 @@ class Model(object):
         return res
 
     def handle(self, type:str, *args):
-        # print(type, *args)
         return getattr(self, f"handle_"+type)(*args)
 
     def handle_write(self, region, addr, size, val):
         self.log.append("write #%d[%lx][%d] =  %x" % (region, addr, size, val))
+        self.log_file.write("[%.4f] write #%d[%lx][%d] =  %x\n" % (time.time(), region, addr, size, val))
 
     def handle_read(self, region, addr, size):
         ret = self.get_data(size)
         self.log.append("read  #%d[%lx][%d] as %x" % (region, addr, size, ret))
+        self.log_file.write("[%.4f] read  #%d[%lx][%d] as %x\n" % (time.time(), region, addr, size, ret))
         return (ret,)
 
     def handle_reset(self):
@@ -79,13 +81,11 @@ class Model(object):
         pass
 
     def handle_exec_init(self):
-        # TODO clear bitmap
-        # self.seed.reset()
-        # self.seed.mutate()
         self.init_time = time.time()
         self.log = []
+        self.log_file.truncate(0)
         print("requesting payload")
-        self.payload:bytearray = self.slave.req_new_payload()
+        self.payload:bytearray = self.req_payload_cb()
         print(self.payload[0:128])
         self.payload_len = len(self.payload)
         self.cur = 0
@@ -95,7 +95,7 @@ class Model(object):
     def __submit_case(self, kasan):
         elapsed = time.time() - self.init_time
         print("Time spent:", elapsed)
-        self.slave.send_bitmap(time=elapsed, kasan = kasan, payload = self.payload)
+        self.submit_res_cb(time=elapsed, kasan=kasan, payload=self.payload)
 
     def handle_exec_exit(self):
         # TODO get bitmap
@@ -115,11 +115,5 @@ class Model(object):
 
     def handle_vm_kasan(self):
         print("VM enters kasan report")
-        # print("has_new_bits: ", self.bitmap.has_new_bits())
         self.__submit_case(True)
         return (0,)
-
-    def release(self):
-        # if self.bitmap:
-            # self.bitmap.release()
-        pass

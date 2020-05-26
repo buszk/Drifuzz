@@ -37,7 +37,7 @@ def hexdump(src, length=16):
     return ''.join(lines)
 
 
-logging_is_enabled = False
+logging_is_enabled = True
 output_file = None
 init_time = 0.0
 

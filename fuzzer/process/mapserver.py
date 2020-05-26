@@ -29,7 +29,7 @@ from communicator import send_msg, recv_msg, Communicator
 from protocol import *
 from state import MapserverState
 from tree import *
-# from common.config import FuzzerConfiguration
+from common.config import FuzzerConfiguration
 from common.debug import log_mapserver
 from process.qemu import qemu
 
@@ -44,8 +44,9 @@ class SetEncoder(json.JSONEncoder):
 
 def mapserver_loader(comm):
     log_mapserver("PID: " + str(os.getpid()))
-
+    print('creating mapserver process')
     mapserver_process = MapserverProcess(comm)
+    print('mapserver created')
     try:
         mapserver_process.loop()
     except KeyboardInterrupt:
@@ -86,7 +87,7 @@ class MapserverProcess:
         self.round_counter_master_post = 0
         self.round_counter_master_pre = 0
 
-        # self.config = FuzzerConfiguration()
+        self.config = FuzzerConfiguration()
         # self.enable_graphviz = self.config.argument_values['g']
         self.enable_graphviz = False
 
@@ -109,6 +110,7 @@ class MapserverProcess:
         #     msg = recv_msg(self.comm.to_mapserver_queue)
         #     self.mapserver_state_obj.pending = len(msg.data)
         #     self.treemap = KaflTree(msg.data, enable_graphviz=self.enable_graphviz)
+        print('mapserver waiting')
         msg = recv_msg(self.comm.to_mapserver_queue)
         self.mapserver_state_obj.pending = len(msg.data)
         self.treemap = KaflTree(msg.data, enable_graphviz=self.enable_graphviz)
@@ -166,7 +168,7 @@ class MapserverProcess:
                 hash_was_new = True
 
         if crash or kasan or timeout:
-            #log_mapserver("CRASH: " + str(crash) + " KASAN: " + str(kasan) + " TIMOUT: " + str(timeout))
+            log_mapserver("CRASH: " + str(crash) + " KASAN: " + str(kasan) + " TIMOUT: " + str(timeout))
             #log_mapserver(str(payload))
             # fugly workaround
             #if fastCount(bitmap) >= (32 << 10):
@@ -217,7 +219,7 @@ class MapserverProcess:
                         self.crash_list.append(new_hash)
                         self.mapserver_state_obj.timeout += 1
         elif hash_was_new:
-            #log_mapserver("NEW FINDING :" + str(payload))
+            log_mapserver("NEW FINDING :" + str(payload))
             if self.__add_new_hash(new_hash, bitmap, payload, performance):
                 #log_mapserver("NEW FINDING :" + str(payload))
                 """
@@ -281,35 +283,56 @@ class MapserverProcess:
 
     def __result_tag_handler(self, request):
         # self.comm.slave_locks_B[request.source].acquire()
+        log_mapserver("tag start")
         results = request.data
         payloads = []
         bitmaps = []
         payload_shm = self.comm.get_mapserver_payload_shm(request.source)
         bitmap_shm = self.comm.get_bitmap_shm(request.source)
 
+        log_mapserver("bitmap")
+        print('bitmap')
         for result in results:
+            print(result.pos)
             if result.new_bits:
-                bitmap_shm.seek(result.pos * self.comm.get_bitmap_shm_size())
+                bitmap_shm.flush()
+                # bitmap_shm.seek(result.pos * self.comm.get_bitmap_shm_size())
+                bitmap_shm.seek(0)
                 payload_shm.seek(result.pos * self.comm.get_mapserver_payload_shm_size())
                 length = payload_shm.read(4)
                 data_len = struct.unpack('<I', length)[0]
                 payloads.append(payload_shm.read(data_len))
-                bitmaps.append(bitmap_shm.read(self.comm.get_bitmap_shm_size()))
+                # bitmaps.append(bitmap_shm.read(self.comm.get_bitmap_shm_size()))
+                bitmap = bitmap_shm.read(self.comm.get_bitmap_shm_size())
+                bitmaps.append(bitmap)
+                b = 0
+                for i in range(len(bitmap)):
+                    if bitmap[i] != 255:
+                        b += 1
+                print('mapserver bitmap bytes %d' % b)
             else:
                 payloads.append(None)
                 bitmaps.append(None)
                 #log_mapserver("[MAPS]\t\ SKIP")
         # self.comm.slave_locks_A[request.source].release()
+        self.comm.slave_locks_bitmap[request.source].release()
+        log_mapserver("effector " + str(len(results)))
         for i in range(len(results)):
+            log_mapserver("loop")
             if results[i].reloaded:
                 self.abortion_counter += 1
 
             if results[i].new_bits:
                 if results[i].timeout:
                     self.mapserver_state_obj.timeout += 1
+                log_mapserver("hashing")
                 new_hash = mmh3.hash64(bitmaps[i])
+                log_mapserver("hashed")
 
+                log_mapserver("check hash")
                 self.__check_hash(new_hash, bitmaps[i], payloads[i], results[i].crash, results[i].timeout, results[i].kasan, results[i].slave_id, results[i].reloaded, results[i].performance, results[i].qid, results[i].pos)
+                
+                log_mapserver("hash checked")
                 self.last_hash = new_hash
                 self.round_counter += 1
                 if self.effector_initial_bitmap:
@@ -319,6 +342,7 @@ class MapserverProcess:
                                 self.effector_map[j] = True
             else:
                 self.round_counter += 1
+        log_mapserver("abort")
 
         # TODO: Replace const value by performance*(1/50)s
         if self.abortion_counter >= self.abortion_threshold:
@@ -327,8 +351,10 @@ class MapserverProcess:
                 send_msg(KAFL_TAG_ABORT_REQ, self.mapserver_state_obj, self.comm.to_master_queue)
                 self.abortion_alredy_sent = True
                 self.comm.stage_abortion_notifier.value = True
+        log_mapserver("end")
 
     def __map_info_tag_handler(self, request):
+        log_mapserver('Reply MAP_INFO')
         send_msg(KAFL_TAG_MAP_INFO, self.mapserver_state_obj, self.comm.to_master_queue)
 
     def __next_tag_handler(self, request):
@@ -386,8 +412,11 @@ class MapserverProcess:
     def loop(self):
         while True:
             print('mapserver loop')
+            log_mapserver('mapserver loop')
             self.__sync_handler()
             request = recv_msg(self.comm.to_mapserver_queue)
+            log_mapserver('recv_msg ' + str(request.tag))
+            print('recv_msg ' + str(request.tag))
 
             if request.tag == KAFL_TAG_RESULT:
                 self.__result_tag_handler(request)

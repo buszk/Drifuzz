@@ -100,6 +100,14 @@ class Communicator:
             self.to_slave_queues.append(multiprocessing.Queue())
             self.socks.append(SocketThread(qemu_socket_prefix + str(i)))
 
+        self.slave_locks_bitmap = []
+        self.slave_locks_A = []
+        self.slave_locks_B = []
+        for i in range(num_processes):
+            self.slave_locks_bitmap.append(multiprocessing.Lock())
+            self.slave_locks_A.append(multiprocessing.Lock())
+            self.slave_locks_B.append(multiprocessing.Lock())
+            self.slave_locks_B[i].acquire()
 
         self.stage_abortion_notifier = multiprocessing.Value('b', False)
         self.slave_termination = multiprocessing.Value('b', False, lock=False)

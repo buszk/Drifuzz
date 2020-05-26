@@ -20,7 +20,7 @@ along with QEMU-PT.  If not, see <http://www.gnu.org/licenses/>.
 import os
 import time
 
-from fuzzer.communicator import recv_msg, Communicator
+from communicator import recv_msg, Communicator
 from threading import Thread
 from common.config import FuzzerConfiguration
 from common.debug import log_update
@@ -45,32 +45,32 @@ class UpdateProcess:
         self.timeout = self.config.config_values['UI_REFRESH_RATE']
 
 
-    def blacklist_updater(self, ui):
-        while True:
-            try:
-                counter = 0
-                with open("/dev/shm/kafl_filter0", "rb") as f:
-                    while True:
-                        byte = f.read(1)
-                        if not byte:
-                            break
-                        if byte != '\x00':
-                            counter += 1
-                ui.blacklist_counter = counter
+    # def blacklist_updater(self, ui):
+    #     while True:
+    #         try:
+    #             counter = 0
+    #             with open("/dev/shm/kafl_filter0", "rb") as f:
+    #                 while True:
+    #                     byte = f.read(1)
+    #                     if not byte:
+    #                         break
+    #                     if byte != '\x00':
+    #                         counter += 1
+    #             ui.blacklist_counter = counter
 
-                counter = 0
-                with open("/dev/shm/kafl_tfilter", "rb") as f:
-                    while True:
-                        byte = f.read(1)
-                        if not byte:
-                            break
-                        if byte != '\x00':
-                            counter += 1
-                ui.blacklist_tcounter = counter
+    #             counter = 0
+    #             with open("/dev/shm/kafl_tfilter", "rb") as f:
+    #                 while True:
+    #                     byte = f.read(1)
+    #                     if not byte:
+    #                         break
+    #                     if byte != '\x00':
+    #                         counter += 1
+    #             ui.blacklist_tcounter = counter
 
-            except:
-                pass
-            time.sleep(2)
+    #         except:
+    #             pass
+    #         time.sleep(2)
 
     def __update_ui(self, ui, ev, update, msg):
         if msg:
@@ -85,10 +85,11 @@ class UpdateProcess:
 
 
     def loop(self):
-        ui = FuzzerUI(self.comm.num_processes, fancy=self.config.argument_values['f'], inline_log=self.config.argument_values['l'])
+        # ui = FuzzerUI(self.comm.num_processes, fancy=self.config.argument_values['f'], inline_log=self.config.argument_values['l'])
+        ui = FuzzerUI(self.comm.num_processes, fancy=True, inline_log=True)
         ev = Evaluation(self.config)
         ui.install_sighandler()
-        Thread(target=self.blacklist_updater, args=(ui,)).start()
+        # Thread(target=self.blacklist_updater, args=(ui,)).start()
         update = None
         while True:
             msg = recv_msg(self.comm.to_update_queue, timeout=self.timeout)

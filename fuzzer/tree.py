@@ -538,15 +538,29 @@ class KaflTree:
                 self.fav_bitmap_updated = True
 
     def __are_new_bits_present(self, new_bitmap):
+        print(type(self.bitmap))
+        print(type(new_bitmap))
+        print('are_new_bits_present')
+        cnt = 0
+        for b in new_bitmap:
+            if b != 255:
+                cnt += 1
+        print('new bitmap has %d bytes' % cnt)
+        cnt = 0
+        for i in range(len(self.bitmap)):
+            if self.bitmap[i] != 0:
+                cnt += 1
+        print('global bitmap has %d bytes' % cnt)
         found = False
         counter = 0
         for i in range(len(new_bitmap)):
             # Check if bit within the shm bitmap is set and the bucketing bitmap field is not already fully populated...
-            if new_bitmap[i] != '\xff' and self.bitmap[i] != '\xff':
+            if new_bitmap[i] != 255 and self.bitmap[i] != 255:
                     for j in reversed(range(len(self.buckets))):
                         # Find the most significant bit ...
                         if (new_bitmap[i]+1 & self.buckets[j]) != 0:
                             # Check if the bucket slot is free ...
+                            # print(self.bitmap[i], ' ', self.buckets[j])
                             if (self.bitmap[i] & self.buckets[j]) == 0:# and j > 1:
                                 counter += 1
                                 found = True
@@ -554,7 +568,6 @@ class KaflTree:
                             # If not, skip this bit ...
                             break
         if found:
-            print("New path found!")
             log_tree("New path found!\t(" + str(counter) + " Bits)")
         return found
 
@@ -563,16 +576,16 @@ class KaflTree:
         counter = 0
         for i in range(len(bitmap)):
             # Check if bit within the shm bitmap is set and the bucketing bitmap field is not already fully populated...
-            if bitmap[i] != '\xff' and finding_bitmap[i] != '\xff':
+            if bitmap[i] != 255 and finding_bitmap[i] != 255:
                     for j in reversed(range(len(self.buckets))):
                         # Find the most significant bit ...
                         if (bitmap[i]+1 & self.buckets[j]) != 0:
                             # Check if the bucket slot is free ...
-                            if (ord(finding_bitmap[i]) & self.buckets[j]) == 0:
+                            if (finding_bitmap[i] & self.buckets[j]) == 0:
                                 counter += 1
                                 found = True
                                 #finding_bitmap[i] += self.buckets[j]
-                                finding_bitmap[i] = chr(ord(finding_bitmap[i]) + self.buckets[j])
+                                finding_bitmap[i] = finding_bitmap[i] + self.buckets[j]
                             # If not, skip this bit ...
                             break
         if found:
@@ -638,7 +651,7 @@ class KaflTree:
     def is_unique_timeout(self, bitmap):
         empty_bitmap = True
         for i in range(len(bitmap)):
-            if bitmap[i] != '\xff':
+            if bitmap[i] != 255:
                 empty_bitmap = False
                 break
         if empty_bitmap:
@@ -654,7 +667,7 @@ class KaflTree:
             return True
         return False
 
-    def append(self, payload, bitmap, node_state=None, node_type=None, performance=0.0):
+    def append(self, payload, bitmap, node_state=None, node_type=KaflNodeType.regular, performance=0.0):
         accepted = False
         if node_type:
             if node_type >= KaflNodeType.crash:
@@ -679,7 +692,7 @@ class KaflTree:
             if not node_type >=KaflNodeType.crash:
                 self.__check_if_favorite(new_node)
                 self.__is_favorite(new_node)
-            self.draw()
+            # self.draw()
             return True
         else:
             return False

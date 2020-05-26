@@ -19,7 +19,7 @@ along with QEMU-PT.  If not, see <http://www.gnu.org/licenses/>.
 
 import signal
 import psutil
-from fuzzer.state import *
+from state import *
 import subprocess
 from common.debug import get_rbuf_content
 
@@ -34,16 +34,16 @@ class FuzzerUI():
     REALCLRSCR = '\x1b[2J'
     BOLD = '\033[1m'
 
-    HLINE = unichr(0x2500)
-    VLINE = unichr(0x2502)
-    VLLINE = unichr(0x2524)
-    VRLINE = unichr(0x251c)
-    LBEDGE = unichr(0x2514)
-    RBEDGE = unichr(0x2518)
-    HULINE = unichr(0x2534)
-    HDLINE = unichr(0x252c)
-    LTEDGE = unichr(0x250c)
-    RTEDGE = unichr(0x2510)
+    HLINE = chr(0x2500)
+    VLINE = chr(0x2502)
+    VLLINE = chr(0x2524)
+    VRLINE = chr(0x251c)
+    LBEDGE = chr(0x2514)
+    RBEDGE = chr(0x2518)
+    HULINE = chr(0x2534)
+    HDLINE = chr(0x252c)
+    LTEDGE = chr(0x250c)
+    RTEDGE = chr(0x2510)
 
     approx_equal = lambda self, a, b, t: abs(a - b) < t
 
@@ -72,7 +72,7 @@ class FuzzerUI():
             self.LTEDGE = '+'
             self.RTEDGE = '+'
 
-        print(self.REALCLRSCR).encode('utf-8')
+        print(self.REALCLRSCR)
         self.process_num = process_num
         self.state = None
         self.__loading_screen()
@@ -89,8 +89,10 @@ class FuzzerUI():
             self.MIN_HEIGHT += 14
 
     def __del__(self):
+        import traceback
+        traceback.print_tb()
         print(self.REALCLRSCR + self.CLRSCR + self.FAIL + \
-                  "[!] Data saved! Bye!" + self.ENDC + "\n").encode('utf-8')
+                  "[!] Data saved! Bye!" + self.ENDC + "\n")#
 
     def update_state(self, state):
         self.state = state
@@ -119,14 +121,14 @@ class FuzzerUI():
     def __sigwinch_handler(self, signum, frame):
         self.size_ok = self.__win_size()
         try:
-            print(self.REALCLRSCR).encode('utf-8')
+            print(self.REALCLRSCR)
             self.__redraw_ui()
         except:
             pass
 
     def __win_size(self):
         try:
-            rows, columns = subprocess.check_output(['stty', 'size']).split(" ")
+            rows, columns = str(subprocess.check_output(['stty', 'size'])).split(" ")
             if int(columns) > self.MIN_WIDTH and int(rows) > self.MIN_HEIGHT:
                 return True
             else:
@@ -175,26 +177,26 @@ class FuzzerUI():
                 ui += " " + self.LBEDGE + (66 * self.HLINE) + self.RBEDGE + "\n"
 
 
-            print(ui).encode('utf-8')
+            print(ui)
         elif self.size_ok and self.state.loading:
             self.__loading_screen()
         else:
             print(self.REALCLRSCR + self.CLRSCR + self.FAIL + \
-                  "[!] Please resize your terminal window!" + self.ENDC + "\n").encode('utf-8')
+                  "[!] Please resize your terminal window!" + self.ENDC + "\n")
 
     def __loading_screen(self):
         print(self.CLRSCR + self.__get_logo(loading_screen=True) +
-              " " + self.VLINE + " Loading QEMU processes into memory...                            " + self.VLINE).encode('utf-8')
-        print(" " + self.VRLINE + (66 * self.HLINE) + self.VLLINE).encode('utf-8')
+              " " + self.VLINE + " Loading QEMU processes into memory...                            " + self.VLINE)
+        print(" " + self.VRLINE + (66 * self.HLINE) + self.VLLINE)
         if self.state:
             print(" " + self.VLINE + " Progress:" + self.__get_progress_bar(39, (self.state.slaves_ready/(self.process_num*1.0)))
                       + " (" + self.__get_printable_integer(self.state.slaves_ready) + " / " +
-                      self.__get_printable_integer(self.process_num) + ") " + self.VLINE + self.ENDC).encode('utf-8')
+                      self.__get_printable_integer(self.process_num) + ") " + self.VLINE + self.ENDC)
         else:
             print(" " + self.VLINE + " Progress:" + self.__get_progress_bar(39, 0.0) +
                   " (" + self.__get_printable_integer(0) + " / " +
-                  self.__get_printable_integer(self.process_num) + ") " + self.VLINE + self.ENDC).encode('utf-8')
-            print(" " + self.LBEDGE + 66 * self.HLINE + self.RBEDGE).encode('utf-8')
+                  self.__get_printable_integer(self.process_num) + ") " + self.VLINE + self.ENDC)
+            print(" " + self.LBEDGE + 66 * self.HLINE + self.RBEDGE)
 
     def __reload_lines(self):
         template = ""

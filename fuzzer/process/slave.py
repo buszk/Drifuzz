@@ -1,3 +1,5 @@
+import os
+import mmap
 import time
 import struct
 import threading
@@ -8,6 +10,7 @@ from communicator import Communicator
 from communicator import send_msg, recv_msg
 from model.model import Model
 from protocol import *
+from common.config import FuzzerConfiguration
 
 
 class SlaveState(IntEnum):
@@ -22,18 +25,31 @@ class SlaveThread(threading.Thread):
     slave_id:int = -1
     payload = None
     payload_sem  = None
+    global_bitmap = None
+    global_bitmap_fd = None
+
+
     def __init__(self, comm, id):
         threading.Thread.__init__(self)
         self.comm = comm
         self.slave_id = id
+        self.config = FuzzerConfiguration()
         self.q = qemu(id)
-        self.model = Model(self)
+        self.model = Model(self.config, self.req_new_payload, self.send_bitmap)
         self.comm.register_model(self.slave_id, self.model)
         self.state = SlaveState.WAITING
         self.payload_sem = threading.BoundedSemaphore(value=1)
         self.payload_sem.acquire()
         self._stop_event = threading.Event()
+        self.bitmap_size = self.config.config_values['BITMAP_SHM_SIZE']
+        self.bitmap_filename = '/dev/shm/drifuzz_bitmap_' + str(self.slave_id)
+        self.comm.slave_locks_bitmap[self.slave_id].acquire()
 
+    def __del__(self):
+        if self.global_bitmap_fd:
+            os.close(self.global_bitmap_fd)
+            self.global_bitmap.close()
+    
     def __restart_vm(self):
         while True:
             self.q.__del()
@@ -51,18 +67,18 @@ class SlaveThread(threading.Thread):
         # if self.state != SlaveState.WAITING:
         #     print("Error: slave is not waiting for input")
         #     return
-        #response.data[0]
+        self.affected_bytes = response.data
         shm_fs = self.comm.get_master_payload_shm(self.slave_id)
         shm_fs.seek(0)
         payload_len = struct.unpack('<I', shm_fs.read(4))[0]
-        print('payload len:', payload_len)
+        # print('payload len:', payload_len)
         self.payload = shm_fs.read(payload_len) 
-        print(self.state)
+        # print(self.state)
         assert(self.state == SlaveState.WAITING)
         self.state = SlaveState.PROC_TASK
-        print('releasing')
+        # print('releasing')
         self.payload_sem.release()
-        print('released')
+        # print('released')
         # Todo one payload each time?
 
     def __respond_bitmap_req(self, response):
@@ -72,30 +88,83 @@ class SlaveThread(threading.Thread):
         self.payload = response.data
         assert(self.state == SlaveState.WAITING)
         self.state = SlaveState.PROC_BITMAP
-        print('releasing')
+        # print('releasing')
         self.payload_sem.release()
-        print('released')
+        # print('released')
+            
+    def open_global_bitmap(self):
+        self.global_bitmap_fd = os.open(self.config.argument_values['work_dir'] + "/bitmap", os.O_RDWR | os.O_SYNC | os.O_CREAT)
+        os.ftruncate(self.global_bitmap_fd, self.bitmap_size)
+        self.global_bitmap = mmap.mmap(self.global_bitmap_fd, self.bitmap_size, mmap.MAP_SHARED, mmap.PROT_WRITE | mmap.PROT_READ)
+
+    def check_for_unseen_bits(self, bitmap):
+        if not self.global_bitmap:
+            self.open_global_bitmap()
+
+        self.check_covered_bytes(bitmap)
+
+        for i in range(self.bitmap_size):
+            if bitmap[i] != 255:
+                if self.global_bitmap[i] == 0:
+                    return True
+                if ((bitmap[i] | self.global_bitmap[i]) != self.global_bitmap[i]):
+                    return True
+        return False
+    
+    def check_covered_bytes(self, bitmap):
+        result = 0
+        global_cnt = 0
+        for i in range(self.bitmap_size):
+            if bitmap[i] != 255:
+                result += 1
+            if self.global_bitmap[i] != 0:
+                global_cnt += 1
+            
+        print('bitmap covers %d bytes; global bitmap covers %d bytes' % (result, global_cnt))
 
     def send_bitmap(self, time = 10, kasan = False, payload = None):
         if self.state == SlaveState.PROC_BITMAP:
-            bitmap = self.comm.get_bitmap_shm(self.slave_id).read(self.comm.get_bitmap_shm_size())
+            bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
+            bitmap_shm.seek(0)
+            bitmap = bitmap_shm.read(self.bitmap_size)
+            # Reply master's BITMAP cmd
             send_msg(KAFL_TAG_REQ_BITMAP, bitmap, self.comm.to_master_from_slave_queue, source = self.slave_id)
+            # Ask master for new payloads
             send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
         elif self.state == SlaveState.PROC_TASK:
-            result = FuzzingResult(0, False, False, kasan, payload,
-                    self.slave_id, time, reloaded=False, qid=self.slave_id)
+            bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
+            bitmap_shm.seek(0)
+            bitmap = bitmap_shm.read(self.bitmap_size)
+            bitmap_shm.flush()
+
+            # Process bitmap results
+            hnb = self.check_for_unseen_bits(bitmap)
+            if hnb:
+                # Update mapserver with the payload
+                mapserver_payload_shm = self.comm.get_mapserver_payload_shm(self.slave_id)
+                mapserver_payload_shm.seek(0)
+                mapserver_payload_shm.write(struct.pack('<I', len(payload)))
+                mapserver_payload_shm.write(payload)
+            result = FuzzingResult(0, False, False, kasan, self.affected_bytes[0],
+                    self.slave_id, time, reloaded=False, new_bits=hnb, qid=self.slave_id)
+            # Notify mapserver the result
             send_msg(KAFL_TAG_RESULT, [result], self.comm.to_mapserver_queue, source=self.slave_id)
+            # Wait for mapserver to finish
+            self.comm.slave_locks_bitmap[self.slave_id].acquire()
+            # Ask master for new payloads
             send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
         else:
             print("Error: slave thread in wrong state")
         self.state = SlaveState.WAITING
 
     def req_new_payload(self):
-        print('acquring')
+        if self.stopped():
+            return None
+        # print('acquring')
         self.payload_sem.acquire()
-        print('acqured')
+        # print('acqured')
         payload = self.payload
-        print(len(payload))
+        # print(len(payload))
         assert(self.state != SlaveState.WAITING)
         return payload
     
@@ -107,7 +176,6 @@ class SlaveThread(threading.Thread):
 
         if response.tag == KAFL_TAG_JOB:
             self.__respond_job_req(response)
-            # send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source=self.slave_id)
 
         elif response.tag == KAFL_TAG_REQ_BITMAP:
             self.__respond_bitmap_req(response)
@@ -123,20 +191,18 @@ class SlaveThread(threading.Thread):
 
 
     def loop(self):
-        print('starting qemu')
+        # print('starting qemu')
         # self.comm.reload_semaphore.acquire()
         self.q.start()
         # self.comm.reload_semaphore.release()
-        print('started qemu')
+        # print('started qemu')
             
         # send_msg(KAFL_TAG_START, self.q.qemu_id, self.comm.to_master_queue, source=self.slave_id)
         # send_msg(KAFL_TAG_REQ, self.q.qemu_id, self.comm.to_master_queue, source=self.slave_id)
-        while True:
+        while not self.stopped():
             #try:
             # if self.comm.slave_termination.value:
                 # return
-            if self.stopped():
-                return
             self.interprocess_proto_handler()
             #except:
             #    return
@@ -146,7 +212,6 @@ class SlaveThread(threading.Thread):
 
     def stop(self):
         self.q.__del__()
-        self.model.release()
         self._stop_event.set()
         
     def stopped(self):
