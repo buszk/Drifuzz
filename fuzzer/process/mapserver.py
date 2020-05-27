@@ -24,6 +24,7 @@ import mmh3, base64, lz4
 import collections
 import json
 import struct
+import lz4.block
 
 from communicator import send_msg, recv_msg, Communicator
 from protocol import *
@@ -152,14 +153,14 @@ class MapserverProcess:
         return accepted
 
     def __save_ring_buffer(self, slave_id, target):
-        data = []
+        data:[str] = []
         for payload in self.ring_buffers[slave_id]:
-            data.append(base64.b64encode(payload))
+            data.append(str(base64.b64encode(payload)))
         with open(target, 'w') as outfile:
-            outfile.write(lz4.block.compress(json.dumps(data)))
+            outfile.write(lz4.block.compress(bytes(json.dumps(data),'utf-8')))
 
     def __check_hash(self, new_hash, bitmap, payload, crash, timeout, kasan, slave_id, reloaded, performance, qid, pos):
-        self.ring_buffers[slave_id].append(str(payload))
+        self.ring_buffers[slave_id].append(payload)
         hash_was_new = False
         if new_hash != self.last_hash:
             if len(self.hash_list) == 0:
