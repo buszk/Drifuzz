@@ -473,6 +473,8 @@ static void alx_init_ring_ptrs(struct alx_priv *alx)
 
 	for (i = 0; i < alx->num_napi; i++) {
 		np = alx->qnapi[i];
+		if (!np)
+			continue;
 		if (np->txq) {
 			np->txq->read_idx = 0;
 			np->txq->write_idx = 0;
@@ -565,7 +567,7 @@ static int alx_reinit_rings(struct alx_priv *alx)
 
 	alx_init_ring_ptrs(alx);
 
-	if (!alx_refill_rx_ring(alx, GFP_KERNEL))
+	if (alx->qnapi[0] && !alx_refill_rx_ring(alx, GFP_KERNEL))
 		return -ENOMEM;
 
 	return 0;
@@ -726,6 +728,7 @@ static void alx_free_rings(struct alx_priv *alx)
 
 static void alx_free_napis(struct alx_priv *alx)
 {
+	printk(KERN_INFO "alx_free_napis\n");
 	struct alx_napi *np;
 	int i;
 
@@ -755,6 +758,8 @@ static const u32 rx_vect_mask[] = {ALX_ISR_RX_Q0, ALX_ISR_RX_Q1,
 
 static int alx_alloc_napis(struct alx_priv *alx)
 {
+
+	printk(KERN_INFO "alx_alloc_napis\n");
 	struct alx_napi *np;
 	struct alx_rx_queue *rxq;
 	struct alx_tx_queue *txq;
@@ -1129,6 +1134,8 @@ static netdev_features_t alx_fix_features(struct net_device *netdev,
 static void alx_netif_stop(struct alx_priv *alx)
 {
 	int i;
+	printk(KERN_INFO "alx_netif_stop\n");
+	// WARN_ON_ONCE(1);
 
 	netif_trans_update(alx->dev);
 	if (netif_carrier_ok(alx->dev)) {
@@ -1331,6 +1338,7 @@ static void alx_check_link(struct alx_priv *alx)
 	spin_unlock_irqrestore(&alx->irq_lock, flags);
 
 	printk(KERN_INFO "alx_check_link: Checking speed\n");
+	printk(KERN_INFO "old_speed %d, new speed %d\n", old_speed, hw->link_speed);
 	if (old_speed == hw->link_speed)
 		return;
 
@@ -1415,6 +1423,7 @@ static int alx_tpd_req(struct sk_buff *skb)
 
 static int alx_tx_csum(struct sk_buff *skb, struct alx_txd *first)
 {
+	printk(KERN_INFO "alx_tx_csum\n");
 	u8 cso, css;
 
 	if (skb->ip_summed != CHECKSUM_PARTIAL)
@@ -1577,10 +1586,12 @@ static netdev_tx_t alx_start_xmit_ring(struct sk_buff *skb,
 	printk(KERN_INFO "alx_start_xmit_ring:4\n");
 	netdev_tx_sent_queue(alx_get_tx_queue(txq), skb->len);
 
+	printk(KERN_INFO "alx_start_xmit_ring:5\n");
 	/* flush updates before updating hardware */
 	wmb();
 	alx_write_mem16(&alx->hw, txq->p_reg, txq->write_idx);
 
+	printk(KERN_INFO "%d vs %d\n", alx_tpd_avail(txq), txq->count / 8);
 	if (alx_tpd_avail(txq) < txq->count / 8)
 		netif_tx_stop_queue(alx_get_tx_queue(txq));
 
@@ -1808,6 +1819,7 @@ static int alx_probe(struct pci_dev *pdev, const struct pci_device_id *ent)
 	netdev->ethtool_ops = &alx_ethtool_ops;
 	netdev->irq = pci_irq_vector(pdev, 0);
 	netdev->watchdog_timeo = ALX_WATCHDOG_TIME;
+	// netdev->watchdog_timeo = 5;
 
 	if (ent->driver_data & ALX_DEV_QUIRK_MSI_INTX_DISABLE_BUG)
 		pdev->dev_flags |= PCI_DEV_FLAGS_MSI_INTX_DISABLE_BUG;

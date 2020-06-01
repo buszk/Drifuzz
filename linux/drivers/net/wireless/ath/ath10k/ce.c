@@ -508,8 +508,15 @@ static int _ath10k_ce_send_nolock(struct ath10k_ce_pipe *ce_state,
 
 	if (unlikely(CE_RING_DELTA(nentries_mask,
 				   write_index, sw_index - 1) <= 0)) {
+		printk(KERN_INFO "nentries_mask %x, write_index %x, sw_index %x\n", 
+				nentries_mask, write_index, sw_index);
+		WARN_ON(1);
 		ret = -ENOSR;
 		goto exit;
+	}
+	else {
+		printk(KERN_INFO "CE_RING_DELTA okay write_index %x, sw_index %x\n",
+				write_index, sw_index);
 	}
 
 	desc = CE_SRC_RING_TO_DESC(src_ring->base_addr_owner_space,
@@ -574,6 +581,8 @@ static int _ath10k_ce_send_nolock_64(struct ath10k_ce_pipe *ce_state,
 
 	if (unlikely(CE_RING_DELTA(nentries_mask,
 				   write_index, sw_index - 1) <= 0)) {
+		printk(KERN_INFO "nentries_mask %x, write_index %x, sw_index %x\n", 
+				nentries_mask, write_index, sw_index);
 		ret = -ENOSR;
 		goto exit;
 	}
@@ -717,6 +726,7 @@ EXPORT_SYMBOL(__ath10k_ce_rx_num_free_bufs);
 static int __ath10k_ce_rx_post_buf(struct ath10k_ce_pipe *pipe, void *ctx,
 				   dma_addr_t paddr)
 {
+	printk(KERN_INFO "ath10k_ce_rx_post_buf\n");
 	struct ath10k *ar = pipe->ar;
 	struct ath10k_ce *ce = ath10k_ce_priv(ar);
 	struct ath10k_ce_ring *dest_ring = pipe->dest_ring;
@@ -730,8 +740,16 @@ static int __ath10k_ce_rx_post_buf(struct ath10k_ce_pipe *pipe, void *ctx,
 	lockdep_assert_held(&ce->ce_lock);
 
 	if ((pipe->id != 5) &&
-	    CE_RING_DELTA(nentries_mask, write_index, sw_index - 1) == 0)
-		return -ENOSPC;
+	    CE_RING_DELTA(nentries_mask, write_index, sw_index - 1) == 0) {
+			printk(KERN_INFO "pipe id: %x\n", pipe->id);
+			printk(KERN_INFO "nentries_mask %x, write_index %x, sw_index %x\n", 
+					nentries_mask, write_index, sw_index);
+				
+			return -ENOSPC;
+		}
+
+	printk(KERN_INFO "ath10k_ce_rx_post_buf okay write_index %x, sw_index %x\n",
+			write_index, sw_index);
 
 	desc->addr = __cpu_to_le32(paddr);
 	desc->nbytes = 0;
@@ -1112,10 +1130,15 @@ static int _ath10k_ce_completed_send_next_nolock(struct ath10k_ce_pipe *ce_state
 				   sw_index);
 	desc->nbytes = 0;
 
-	/* Update sw_index */
+	/* Update sw_index */		
 	sw_index = CE_RING_IDX_INCR(nentries_mask, sw_index);
 	src_ring->sw_index = sw_index;
-
+	// printk(KERN_INFO "UPDATE 1 write_index %x, sw_index %x\n", 
+	// 			src_ring->write_index, sw_index);
+	// if (unlikely(CE_RING_DELTA(nentries_mask,
+	// 			   src_ring->write_index, sw_index - 1) <= 0))  {
+	// 				   WARN_ON(1);
+	// 			   }
 	return 0;
 }
 
@@ -1168,6 +1191,8 @@ static int _ath10k_ce_completed_send_next_nolock_64(struct ath10k_ce_pipe *ce_st
 	/* Update sw_index */
 	sw_index = CE_RING_IDX_INCR(nentries_mask, sw_index);
 	src_ring->sw_index = sw_index;
+	printk(KERN_INFO "UPDATE 2 write_index %x, sw_index %x\n", 
+				src_ring->write_index, sw_index);
 
 	return 0;
 }
@@ -1259,6 +1284,8 @@ int ath10k_ce_cancel_send_next(struct ath10k_ce_pipe *ce_state,
 		/* Update sw_index */
 		sw_index = CE_RING_IDX_INCR(nentries_mask, sw_index);
 		src_ring->sw_index = sw_index;
+		printk(KERN_INFO "UPDATE 3 write_index %x, sw_index %x\n", 
+					src_ring->write_index, sw_index);
 		ret = 0;
 	} else {
 		ret = -EIO;
@@ -1434,6 +1461,8 @@ static int ath10k_ce_init_src_ring(struct ath10k *ar,
 
 	src_ring->sw_index = ath10k_ce_src_ring_read_index_get(ar, ctrl_addr);
 	src_ring->sw_index &= src_ring->nentries_mask;
+	printk(KERN_INFO "UPDATE 4 write_index %x, sw_index %x\n", 
+				src_ring->write_index, src_ring->sw_index);
 	src_ring->hw_index = src_ring->sw_index;
 
 	src_ring->write_index =

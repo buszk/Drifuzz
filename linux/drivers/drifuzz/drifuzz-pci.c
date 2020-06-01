@@ -32,6 +32,7 @@ enum ACTIONS {
     SUBMIT_STAGE,
 	SUBMIT_KCOV_TRACE,
 	KASAN,
+	REQ_RESET,
 };
 
 struct qemu_adapter {
@@ -123,12 +124,19 @@ EXPORT_SYMBOL(handle_submit_kcov_trace);
 void handle_kasan(void) {
 	printk(KERN_INFO "handle_kasan\n");
 	if (adapter) {
-		printk(KERN_INFO "available adapter\n");
         writeq(KASAN, adapter->hw_addr + CMD_ADDR);
 		writeq(ACT, adapter->hw_addr);
 	}
 }
 EXPORT_SYMBOL(handle_kasan);
+
+void handle_req_reset(void) {
+	printk(KERN_INFO "handle_reset\n");
+	if (adapter) {
+        writeq(REQ_RESET, adapter->hw_addr + CMD_ADDR);
+		writeq(ACT, adapter->hw_addr);
+	}
+}
 
 static int handle_command(void* buffer, size_t len) {
 	uint64_t *pbuffer;
@@ -179,6 +187,9 @@ static int handle_command(void* buffer, size_t len) {
 		WARN_ON(len!= 0x18);
 		handle_submit_kcov_trace(argv[0], argv[1]);
 		return 0x18;
+	case REQ_RESET:
+		WARN_ON(len != 0x8);
+		handle_req_reset();
 	default:
 		printk(KERN_INFO "Unknow action\n");
 		return 0x4;

@@ -732,11 +732,13 @@ static int ath10k_init_configure_target(struct ath10k *ar)
 	}
 
 	/* set the firmware mode to STA/IBSS/AP */
+	printk(KERN_INFO "setting firmware mode (1/2) begins\n");
 	ret = ath10k_bmi_read32(ar, hi_option_flag, &param_host);
 	if (ret) {
 		ath10k_err(ar, "setting firmware mode (1/2) failed\n");
 		return ret;
 	}
+	printk(KERN_INFO "setting firmware mode (1/2) ends\n");
 
 	/* TODO following parameters need to be re-visited. */
 	/* num_device */
@@ -751,11 +753,13 @@ static int ath10k_init_configure_target(struct ath10k *ar)
 	/* fwsubmode */
 	param_host |= (0 << HI_OPTION_FW_SUBMODE_SHIFT);
 
+	printk(KERN_INFO "setting firmware mode (2/2) begins\n");
 	ret = ath10k_bmi_write32(ar, hi_option_flag, param_host);
 	if (ret) {
 		ath10k_err(ar, "setting firmware mode (2/2) failed\n");
 		return ret;
 	}
+	printk(KERN_INFO "setting firmware mode (2/2) ends\n");
 
 	/* We do all byte-swapping on the host */
 	ret = ath10k_bmi_write32(ar, hi_be, 0);
@@ -1171,6 +1175,7 @@ static int ath10k_core_parse_bd_ie_board(struct ath10k *ar,
 					 const char *boardname,
 					 int bd_ie_type)
 {
+	printk(KERN_INFO "ath10k_core_parse_bd_ie_board\n");
 	const struct ath10k_fw_ie *hdr;
 	bool name_match_found;
 	int ret, board_ie_id;
@@ -1185,6 +1190,9 @@ static int ath10k_core_parse_bd_ie_board(struct ath10k *ar,
 		board_ie_id = le32_to_cpu(hdr->id);
 		board_ie_len = le32_to_cpu(hdr->len);
 		board_ie_data = hdr->data;
+		printk(KERN_INFO "board_ie_id %x\n", board_ie_id);
+		printk(KERN_INFO "board_ie_len %x\n", board_ie_len);
+		printk(KERN_INFO "board_ie_data %s\n", board_ie_data);
 
 		buf_len -= sizeof(*hdr);
 		buf += sizeof(*hdr);
@@ -1983,8 +1991,9 @@ static int ath10k_core_fetch_firmware_files(struct ath10k *ar)
 		ar->fw_api = i;
 		ath10k_dbg(ar, ATH10K_DBG_BOOT, "trying fw api %d\n",
 			   ar->fw_api);
-
+		printk(KERN_INFO "ath10k_core_get_fw_name\n");
 		ath10k_core_get_fw_name(ar, fw_name, sizeof(fw_name), ar->fw_api);
+		printk(KERN_INFO "ath10k_core_fetch_firmware_api_n\n");
 		ret = ath10k_core_fetch_firmware_api_n(ar, fw_name,
 						       &ar->normal_mode_fw.fw_file);
 		if (!ret)
@@ -2177,7 +2186,9 @@ static int ath10k_init_hw_params(struct ath10k *ar)
 
 	for (i = 0; i < ARRAY_SIZE(ath10k_hw_params_list); i++) {
 		hw_params = &ath10k_hw_params_list[i];
-
+		printk(KERN_INFO "bus:    %x vs %x", hw_params->bus, ar->hif.bus);
+		printk(KERN_INFO "id:     %x vs %x", hw_params->id, ar->target_version);
+		printk(KERN_INFO "dev_id: %x vs %x", hw_params->dev_id, ar->dev_id);
 		if (hw_params->bus == ar->hif.bus &&
 		    hw_params->id == ar->target_version &&
 		    hw_params->dev_id == ar->dev_id)
@@ -2919,12 +2930,14 @@ static int ath10k_core_probe_fw(struct ath10k *ar)
 		ath10k_err(ar, "incorrect hif bus type: %d\n", ar->hif.bus);
 	}
 
+	printk(KERN_INFO "ath10k_init_hw_params\n");
 	ret = ath10k_init_hw_params(ar);
 	if (ret) {
 		ath10k_err(ar, "could not get hw params (%d)\n", ret);
 		goto err_power_down;
 	}
 
+	printk(KERN_INFO "ath10k_core_fetch_firmware_files\n");
 	ret = ath10k_core_fetch_firmware_files(ar);
 	if (ret) {
 		ath10k_err(ar, "could not fetch firmware files (%d)\n", ret);
@@ -2936,6 +2949,7 @@ static int ath10k_core_probe_fw(struct ath10k *ar)
 	memcpy(ar->hw->wiphy->fw_version, ar->normal_mode_fw.fw_file.fw_version,
 	       sizeof(ar->hw->wiphy->fw_version));
 
+	printk(KERN_INFO "ath10k_debug_print_hwfw_info\n");
 	ath10k_debug_print_hwfw_info(ar);
 
 	if (!test_bit(ATH10K_FW_FEATURE_NON_BMI,
@@ -2973,8 +2987,10 @@ static int ath10k_core_probe_fw(struct ath10k *ar)
 		ath10k_debug_print_board_info(ar);
 	}
 
+	printk(KERN_INFO "device_get_mac_address\n");
 	device_get_mac_address(ar->dev, ar->mac_addr, sizeof(ar->mac_addr));
 
+	printk(KERN_INFO "ath10k_core_init_firmware_features\n");
 	ret = ath10k_core_init_firmware_features(ar);
 	if (ret) {
 		ath10k_err(ar, "fatal problem with firmware features: %d\n",
@@ -2995,6 +3011,7 @@ static int ath10k_core_probe_fw(struct ath10k *ar)
 
 	mutex_lock(&ar->conf_mutex);
 
+	printk(KERN_INFO "ath10k_core_start\n");
 	ret = ath10k_core_start(ar, ATH10K_FIRMWARE_MODE_NORMAL,
 				&ar->normal_mode_fw);
 	if (ret) {

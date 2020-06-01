@@ -2187,7 +2187,8 @@ err_req:
 
 	if (ret == 0 && resp_len) {
 		*resp_len = min(*resp_len, xfer.resp_len);
-		memcpy(resp, tresp, xfer.resp_len);
+		// memcpy(resp, tresp, xfer.resp_len);
+		memcpy(resp, tresp, *resp_len);
 	}
 err_dma:
 	kfree(treq);
@@ -2203,6 +2204,9 @@ static void ath10k_pci_bmi_send_done(struct ath10k_ce_pipe *ce_state)
 	if (ath10k_ce_completed_send_next(ce_state, (void **)&xfer))
 		return;
 
+	if (WARN_ON_ONCE(!xfer))
+		return;
+		
 	xfer->tx_done = true;
 }
 
