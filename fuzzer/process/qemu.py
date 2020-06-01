@@ -75,22 +75,36 @@ class qemu:
         self.end_ticks = 0
         # self.tick_timeout_treshold = self.config.config_values["TIMEOUT_TICK_FACTOR"]
 
-        self.cmd =  "/home/buszk/Workspace/git/Drifuzz/qemu-build/x86_64-softmmu/qemu-system-x86_64 " + " " \
-                    "-hda /home/buszk/Workspace/git/Drifuzz/image/buster.img " \
-                    "-kernel /home/buszk/Workspace/git/Drifuzz/linux-module-build/arch/x86_64/boot/bzImage "\
-                    "-append \"console=ttyS0 nokaslr root=/dev/sda earlyprintk=serial\" " \
-                    "-snapshot " \
-                    "-enable-kvm " \
-                    "-k de " \
-                    "-m 1G " \
-                    "-nographic " \
-                    "-net user " \
-                    "-net nic,model=alx " \
-                    "-machine kernel-irqchip=off " \
-                    "-device drifuzz,bitmap=" + self.bitmap_filename + \
+        # self.cmd =  "/home/buszk/Workspace/git/Drifuzz/qemu-build/x86_64-softmmu/qemu-system-x86_64 " + " " \
+        #             "-hda /home/buszk/Workspace/git/Drifuzz/image/buster.img " \
+        #             "-kernel /home/buszk/Workspace/git/Drifuzz/linux-module-build/arch/x86_64/boot/bzImage "\
+        #             "-append \"console=ttyS0 nokaslr root=/dev/sda earlyprintk=serial\" " \
+        #             "-snapshot " \
+        #             "-enable-kvm " \
+        #             "-k de " \
+        #             "-m 1G " \
+        #             "-nographic " \
+        #             "-net user " \
+        #             "-net nic,model=alx " \
+        #             "-machine kernel-irqchip=off " \
+        #             "-device drifuzz,bitmap=" + self.bitmap_filename + \
+        #                 ",bitmap_size=" + str(self.bitmap_size) + \
+        #                 ",socket=" + self.socket_path + " " \
+        self.cmd = ["/home/buszk/Workspace/git/Drifuzz/qemu-build/x86_64-softmmu/qemu-system-x86_64",
+                    "-hda", "/home/buszk/Workspace/git/Drifuzz/image/buster.img",
+                    "-kernel", "/home/buszk/Workspace/git/Drifuzz/linux-module-build/arch/x86_64/boot/bzImage",
+                    "-append", "console=ttyS0 nokaslr root=/dev/sda earlyprintk=serial",
+                    "-snapshot", 
+                    "-enable-kvm",
+                    "-k", "de",
+                    "-m", "1G",
+                    "-nographic",
+                    "-net", "user",
+                    "-net", "nic,model=alx",
+                    "-machine", "kernel-irqchip=off",
+                    "-device", "drifuzz,bitmap=" + self.bitmap_filename + \
                         ",bitmap_size=" + str(self.bitmap_size) + \
-                        ",socket=" + self.socket_path + " " \
-
+                        ",socket=" + self.socket_path]
         self.kafl_shm_f = None
         self.kafl_shm   = None
         self.fs_shm_f   = None
@@ -115,7 +129,10 @@ class qemu:
         #     log_qemu("Launching Virtual Maschine...CMD:\n" + self.cmd, self.qemu_id)
         # else:
         #     log_qemu("Launching Virtual Maschine...", self.qemu_id)
-        self.virgin_bitmap = ''.join(chr(0xff) for x in range(self.bitmap_size))
+        # self.virgin_bitmap = ''.join(chr(0xff) for x in range(self.bitmap_size))
+        self.virgin_bitmap = bytearray(self.bitmap_size)
+        for i in range(self.bitmap_size):
+            self.virgin_bitmap[i] = 255
 
         # self.__set_binary(self.binary_filename, self.config.argument_values['executable'], (16 << 20))
 
@@ -213,23 +230,26 @@ class qemu:
 
     def start(self, verbose=False):
         print(self.cmd)
-        return
+        # return
         if verbose:
-            self.process = subprocess.Popen(filter(None, self.cmd.split(" ")),
+        # if True:
+            self.process = subprocess.Popen(self.cmd,
                                             stdin=None,
                                             stdout=None,
                                             stderr=None)
         else:
-            self.process = subprocess.Popen(filter(None, self.cmd.split(" ")),
-                                            stdin=subprocess.PIPE,
-                                            stdout=subprocess.PIPE,
-                                            stderr=subprocess.PIPE)
+            #TODO: maybe a log file? devnull is fast, PIPE is very slow
+            self.process = subprocess.Popen(self.cmd,
+                                            stdin=subprocess.DEVNULL,
+                                            stdout=subprocess.DEVNULL,
+                                            stderr=subprocess.DEVNULL)
 
         self.stat_fd = open("/proc/" + str(self.process.pid) + "/stat")
         self.init()
         try:
             self.set_init_state()
-        except:
+        except Exception as e:
+            print(e)
             return False
         self.initial_mem_usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
         #time.sleep(1)
@@ -245,18 +265,18 @@ class qemu:
         self.kasan = False
         self.start_ticks = 0
         self.end_ticks = 0
-        self.control.settimeout(10.0)
-        v = self.control.recv(1)
-        log_qemu("Initial stage 1 handshake ["+ str(v) + "] done...", self.qemu_id)
-        self.__set_binary(self.binary_filename, self.config.argument_values['executable'], (16 << 20))
-        if v != 'D':
-            self.control.send('R')
-            v = self.control.recv(1)
-            log_qemu("Initial stage 2 handshake ["+ str(v) + "] done...", self.qemu_id)
-        self.control.send('R')
-        v = self.control.recv(1)
-        log_qemu("Initial stage 3 handshake ["+ str(v) + "] done...", self.qemu_id)
-        self.control.settimeout(5.0)
+        # self.control.settimeout(10.0)
+        # v = self.control.recv(1)
+        # log_qemu("Initial stage 1 handshake ["+ str(v) + "] done...", self.qemu_id)
+        # self.__set_binary(self.binary_filename, self.config.argument_values['executable'], (16 << 20))
+        # if v != 'D':
+        #     self.control.send('R')
+        #     v = self.control.recv(1)
+        #     log_qemu("Initial stage 2 handshake ["+ str(v) + "] done...", self.qemu_id)
+        # self.control.send('R')
+        # v = self.control.recv(1)
+        # log_qemu("Initial stage 3 handshake ["+ str(v) + "] done...", self.qemu_id)
+        # self.control.settimeout(5.0)
 
     def init(self):
         # self.control = socket.socket(socket.AF_UNIX)

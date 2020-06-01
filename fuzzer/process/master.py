@@ -31,7 +31,7 @@ from technique.debug import *
 # from tree import KaflNodeType
 from common.util import get_seed_files, check_state_exists, json_dumper
 from common.util import read_binary_file
-# from common.config import FuzzerConfiguration
+from common.config import FuzzerConfiguration
 from common.debug import log_master
 from shutil import copyfile
 
@@ -62,7 +62,7 @@ class MasterProcess:
         self.mapserver_status_pending = False
 
         self.skip_zero = False
-        # self.config = FuzzerConfiguration()
+        self.config = FuzzerConfiguration()
         # self.skip_zero = self.config.argument_values['s']
         # self.refresh_rate = self.config.config_values['UI_REFRESH_RATE']
         # self.use_effector_map = self.config.argument_values['d']
@@ -79,12 +79,12 @@ class MasterProcess:
         # log_master("Use effector maps: " + str(self.use_effector_map))
 
     def __start_processes(self):
-        # for i in range(self.comm.num_processes):
-        #     start_time = time.time()
-        #     recv_tagged_msg(self.comm.to_master_queue, KAFL_TAG_START)
-        #     self.kafl_state.slaves_ready += 1
-        #     if (time.time() - start_time) >= 0.1:
-        #         send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
+        for i in range(self.comm.num_processes):
+            start_time = time.time()
+            recv_tagged_msg(self.comm.to_master_queue, KAFL_TAG_START)
+            self.kafl_state.slaves_ready += 1
+            if (time.time() - start_time) >= 0.1:
+                send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
 
         self.kafl_state.loading = False
         # if not self.config.load_old_state:
@@ -178,7 +178,7 @@ class MasterProcess:
             send_msg(KAFL_TAG_MAP_INFO, None, self.comm.to_mapserver_queue)
             end = time.time()
             self.kafl_state.performance = ((self.counter * 1.0) / (end - self.start))
-            log_master('performance %d')
+            log_master('performance %d' % self.kafl_state.performance)
             self.kafl_state.performance_rb.append(((self.counter * 1.0) / (end - self.start)))
             self.kafl_state.max_performance_rb.append(((self.counter * 1.0) / (end - self.start)))
             self.start = time.time()
@@ -563,15 +563,16 @@ class MasterProcess:
         Method to store an entire master state to JSON file...
         """
         dump = {}
-        for key, value in self.__dict__.iteritems():
+        for key, value in self.__dict__.items():
             if key == "kafl_state":
                 dump[key] = value.save_data()
 
+        print(dump)
         with open(self.config.argument_values['work_dir'] + "/master.json", 'w') as outfile:
             json.dump(dump, outfile, default=json_dumper)
 
         # Save kAFL Filter
-        copyfile("/dev/shm/kafl_filter0", self.config.argument_values['work_dir'] + "/kafl_filter0")
+        # copyfile("/dev/shm/kafl_filter0", self.config.argument_values['work_dir'] + "/kafl_filter0")
 
     def load_data(self):
         """
@@ -585,5 +586,5 @@ class MasterProcess:
                 else:
                     setattr(self, key, value)
 
-        copyfile(self.config.argument_values['work_dir'] + "/kafl_filter0", "/dev/shm/kafl_filter0")
+        # copyfile(self.config.argument_values['work_dir'] + "/kafl_filter0", "/dev/shm/kafl_filter0")
 

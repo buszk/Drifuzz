@@ -15,9 +15,10 @@ class Model(object):
 
     log_file = None
 
-    def __init__(self, config, req_payload_cb, submit_res_cb):
+    def __init__(self, config, req_payload_cb, submit_res_cb, reset_cb):
         self.req_payload_cb = req_payload_cb
         self.submit_res_cb = submit_res_cb
+        self.reset_cb = reset_cb
         self.log_file = open('rw.log', 'w')
 
     def __del__(self):
@@ -86,7 +87,7 @@ class Model(object):
         self.log_file.truncate(0)
         print("requesting payload")
         self.payload:bytearray = self.req_payload_cb()
-        print(self.payload[0:128])
+        print(self.payload[0:20])
         self.payload_len = len(self.payload)
         self.cur = 0
         
@@ -111,9 +112,16 @@ class Model(object):
         return (0,)
 
     def handle_vm_ready(self):
+        print("VM ready")
         return (0,)
 
     def handle_vm_kasan(self):
         print("VM enters kasan report")
         self.__submit_case(True)
+        self.reset_cb()
         return (0,)
+
+    def handle_req_reset(self):
+        print("VM req hard reset")
+        self.reset_cb()
+

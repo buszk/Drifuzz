@@ -1,6 +1,7 @@
 import os
 import mmap
 import time
+import signal
 import struct
 import threading
 import multiprocessing
@@ -28,6 +29,9 @@ class SlaveThread(threading.Thread):
     global_bitmap = None
     global_bitmap_fd = None
 
+    reproduce = None
+    vm_ready = False
+
 
     def __init__(self, comm, id):
         threading.Thread.__init__(self)
@@ -35,7 +39,8 @@ class SlaveThread(threading.Thread):
         self.slave_id = id
         self.config = FuzzerConfiguration()
         self.q = qemu(id)
-        self.model = Model(self.config, self.req_new_payload, self.send_bitmap)
+        self.model = Model(self.config, self.req_new_payload, self.send_bitmap,
+                self.__restart_vm)
         self.comm.register_model(self.slave_id, self.model)
         self.state = SlaveState.WAITING
         self.payload_sem = threading.BoundedSemaphore(value=1)
@@ -44,16 +49,29 @@ class SlaveThread(threading.Thread):
         self.bitmap_size = self.config.config_values['BITMAP_SHM_SIZE']
         self.bitmap_filename = '/dev/shm/drifuzz_bitmap_' + str(self.slave_id)
         self.comm.slave_locks_bitmap[self.slave_id].acquire()
+    
+        self.reproduce = self.config.argument_values['reproduce']
+        
 
     def __del__(self):
         if self.global_bitmap_fd:
             os.close(self.global_bitmap_fd)
             self.global_bitmap.close()
+
+    def exit_if_reproduce(self):
+        if self.reproduce and self.reproduce != "":
+            print("Reproducing case. Stop here")
+            self.q.__del__()
+            os.kill(os.getpid(), signal.SIGINT)
+            return False
+
     
     def __restart_vm(self):
+        self.exit_if_reproduce()
+        
         while True:
-            self.q.__del()
-            self.q = qemu()
+            self.q.__del__()
+            self.q = qemu(self.slave_id)
             if self.q.start():
                 break
             else:
@@ -76,9 +94,9 @@ class SlaveThread(threading.Thread):
         # print(self.state)
         assert(self.state == SlaveState.WAITING)
         self.state = SlaveState.PROC_TASK
-        # print('releasing')
+        print('releasing')
         self.payload_sem.release()
-        # print('released')
+        print('released')
         # Todo one payload each time?
 
     def __respond_bitmap_req(self, response):
@@ -88,9 +106,9 @@ class SlaveThread(threading.Thread):
         self.payload = response.data
         assert(self.state == SlaveState.WAITING)
         self.state = SlaveState.PROC_BITMAP
-        # print('releasing')
+        print('releasing')
         self.payload_sem.release()
-        # print('released')
+        print('released')
             
     def open_global_bitmap(self):
         self.global_bitmap_fd = os.open(self.config.argument_values['work_dir'] + "/bitmap", os.O_RDWR | os.O_SYNC | os.O_CREAT)
@@ -123,6 +141,8 @@ class SlaveThread(threading.Thread):
         print('bitmap covers %d bytes; global bitmap covers %d bytes' % (result, global_cnt))
 
     def send_bitmap(self, time = 10, kasan = False, payload = None):
+        self.exit_if_reproduce()
+
         if self.state == SlaveState.PROC_BITMAP:
             bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
             bitmap_shm.seek(0)
@@ -160,9 +180,18 @@ class SlaveThread(threading.Thread):
     def req_new_payload(self):
         if self.stopped():
             return None
-        # print('acquring')
+        
+        if not self.vm_ready:
+            self.vm_ready = True
+            send_msg(KAFL_TAG_START, self.q.qemu_id, self.comm.to_master_queue, source=self.slave_id)
+            
+        if self.reproduce and self.reproduce != "":
+            with open(self.reproduce, 'rb') as infile:
+                return infile.read()
+        
+        print('acquring')
         self.payload_sem.acquire()
-        # print('acqured')
+        print('acqured')
         payload = self.payload
         # print(len(payload))
         assert(self.state != SlaveState.WAITING)
@@ -191,13 +220,14 @@ class SlaveThread(threading.Thread):
 
 
     def loop(self):
-        # print('starting qemu')
+        print('starting qemu')
         # self.comm.reload_semaphore.acquire()
-        self.q.start()
+        v = False
+        if self.reproduce and self.reproduce != "":
+            v = True
+        self.q.start(verbose=v)
         # self.comm.reload_semaphore.release()
-        # print('started qemu')
-            
-        # send_msg(KAFL_TAG_START, self.q.qemu_id, self.comm.to_master_queue, source=self.slave_id)
+        print('started qemu')
         # send_msg(KAFL_TAG_REQ, self.q.qemu_id, self.comm.to_master_queue, source=self.slave_id)
         while not self.stopped():
             #try:

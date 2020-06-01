@@ -45,16 +45,18 @@ class SetEncoder(json.JSONEncoder):
 
 def mapserver_loader(comm):
     log_mapserver("PID: " + str(os.getpid()))
-    print('creating mapserver process')
-    mapserver_process = MapserverProcess(comm)
-    print('mapserver created')
+    mapserver_process = None
     try:
+        print('creating mapserver process')
+        mapserver_process = MapserverProcess(comm)
+        print('mapserver created')
         mapserver_process.loop()
     except KeyboardInterrupt:
-        mapserver_process.comm.slave_termination.value = True
-        mapserver_process.treemap.save_data()
-        mapserver_process.save_data()
-        log_mapserver("Date saved!")
+        if mapserver_process:
+            mapserver_process.comm.slave_termination.value = True
+            mapserver_process.treemap.save_data()
+            mapserver_process.save_data()
+            log_mapserver("Date saved!")
 
 
 class MapserverProcess:
@@ -157,7 +159,7 @@ class MapserverProcess:
         for payload in self.ring_buffers[slave_id]:
             data.append(str(base64.b64encode(payload)))
         with open(target, 'w') as outfile:
-            outfile.write(lz4.block.compress(bytes(json.dumps(data),'utf-8')))
+            outfile.write(str(lz4.block.compress(bytes(json.dumps(data),'utf-8'))))
 
     def __check_hash(self, new_hash, bitmap, payload, crash, timeout, kasan, slave_id, reloaded, performance, qid, pos):
         self.ring_buffers[slave_id].append(payload)
@@ -442,7 +444,7 @@ class MapserverProcess:
 
         dump = {}
 
-        for key, value in self.__dict__.iteritems():
+        for key, value in self.__dict__.items():
             if key == "mapserver_state_obj":
                 dump[key] = self.mapserver_state_obj.save_data()
             elif key == "enable_graphviz" or key == "last_hash":

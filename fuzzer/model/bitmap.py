@@ -44,7 +44,6 @@ class Bitmap():
                 elif ret < 1:
                     ret = 1
         return ret
-        
 
     def release(self):
         self.shm.remove()

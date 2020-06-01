@@ -8,6 +8,7 @@ class Command(IntEnum):
     EXEC_EXIT = 4
     READY = 5
     VM_KASAN = 6
+    REQ_RESET = 7
 
 opts = {
     Command.WRITE: {
@@ -45,5 +46,11 @@ opts = {
         'argbytes': 0,
         'argfmt': '',
         'retfmt': '<Q'
+    },
+    Command.REQ_RESET: {
+        'func': 'req_reset',
+        'argbytes': 0,
+        'argfmt': '',
+        'retfmt': ''
     }
 }

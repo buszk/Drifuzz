@@ -60,13 +60,18 @@ class SocketThread (threading.Thread):
                         # print(_args)
                         ret = self.model.handle(opts[Command(_ty)]['func'], *_args)
                         # print(ret)
+                        # If VM request reset, we close the connection
+                        if Command(_ty) == Command.REQ_RESET:
+                            print('REQ_RESET')
+                            break            
                         if ret != None and opt['retfmt'] != '':
                             _ret = struct.pack(opt['retfmt'], *ret)
-                            connection.send(_ret)
-                        
+                            connection.send(_ret)        
 
                     except socket.timeout:
                         pass
+                    except ConnectionResetError:
+                        break
                 
             finally:
                 connection.close()
@@ -163,6 +168,7 @@ class Communicator:
     def stop(self):
         for sock in self.socks:
             sock.stop()
+            sock.join()
 
 
 class Message():

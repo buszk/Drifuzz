@@ -190,12 +190,12 @@ class FuzzerUI():
         print(" " + self.VRLINE + (66 * self.HLINE) + self.VLLINE)
         if self.state:
             print(" " + self.VLINE + " Progress:" + self.__get_progress_bar(39, (self.state.slaves_ready/(self.process_num*1.0)))
-                      + " (" + self.__get_printable_integer(self.state.slaves_ready) + " / " +
-                      self.__get_printable_integer(self.process_num) + ") " + self.VLINE + self.ENDC)
+                      + " (" + self.__get_printable_number(self.state.slaves_ready) + " / " +
+                      self.__get_printable_number(self.process_num) + ") " + self.VLINE + self.ENDC)
         else:
             print(" " + self.VLINE + " Progress:" + self.__get_progress_bar(39, 0.0) +
-                  " (" + self.__get_printable_integer(0) + " / " +
-                  self.__get_printable_integer(self.process_num) + ") " + self.VLINE + self.ENDC)
+                  " (" + self.__get_printable_number(0) + " / " +
+                  self.__get_printable_number(self.process_num) + ") " + self.VLINE + self.ENDC)
             print(" " + self.LBEDGE + 66 * self.HLINE + self.RBEDGE)
 
     def __reload_lines(self):
@@ -203,12 +203,12 @@ class FuzzerUI():
         template += " +" +  66 * self.HLINE + "+" + "\n"
         if self.state:
             template += " " + self.VLINE + " KSM-Reload:" + self.__get_progress_bar(37, (self.state.slaves_ready/(self.process_num*1.0))) + \
-                    " (" + self.__get_printable_integer(self.state.slaves_ready) + " / " + \
-                    self.__get_printable_integer(self.process_num) + ") " + self.VLINE + self.ENDC + "\n"
+                    " (" + self.__get_printable_number(self.state.slaves_ready) + " / " + \
+                    self.__get_printable_number(self.process_num) + ") " + self.VLINE + self.ENDC + "\n"
         else:
             template += " " + self.VLINE + " KSM-Reload:" + self.__get_progress_bar(37, 0.0) + \
-                    " (" + self.__get_printable_integer(0) + " / " + \
-                    self.__get_printable_integer(self.process_num) + ") " + self.VLINE + self.ENDC + "\n"
+                    " (" + self.__get_printable_number(0) + " / " + \
+                    self.__get_printable_number(self.process_num) + ") " + self.VLINE + self.ENDC + "\n"
         return template
 
     def __get_logo(self, loading_screen=False):
@@ -224,7 +224,7 @@ class FuzzerUI():
                "           /_/|_|\___/_/  /_/ /_/\___/_/  /_/  |_/_/   /_____/           \n" + \
                " " + self.LTEDGE  + (66 * self.HLINE) + self.RTEDGE + "    \n" + \
                " " + self.VLINE + "                 " + self.FAIL + "      * x86-64 kernel AFL *     " + self.ENDC + \
-               " (" + self.__get_printable_integer(self.process_num)[1:] +  " Processes) " + self.VLINE + " \n" + \
+               " (" + self.__get_printable_number(self.process_num)[1:] +  " Processes) " + self.VLINE + " \n" + \
                " " + self.VRLINE + (25 * self.HLINE) + HDLINE + (40 * self.HLINE) + self.VLLINE + "\n"
 
     def __get_ui_line1(self):
@@ -255,7 +255,7 @@ class FuzzerUI():
                 .replace("<PERFORMANCE_VALUE>", "  - ")
         else:
             performance_bar = self.__get_progress_bar(self.BEST_PERFORMANCE_BAR_LEN, performance_float)
-            performance_value = self.__get_printable_integer(self.state.performance)
+            performance_value = self.__get_printable_number(self.state.performance)
             return template.replace("<INTERFACE>", interface) \
                 .replace("<PERFORMANCE_BAR>", performance_bar) \
                 .replace("<PERFORMANCE_VALUE>", performance_value)
@@ -285,11 +285,11 @@ class FuzzerUI():
             use_color = False
         else:
             use_color = True
-        template = " " + self.VLINE + " Blacklisted:  " + self.__get_printable_integer(self.blacklist_tcounter) + "/" + self.__get_printable_integer(self.blacklist_counter) + \
+        template = " " + self.VLINE + " Blacklisted:  " + self.__get_printable_number(self.blacklist_tcounter) + "/" + self.__get_printable_number(self.blacklist_counter) + \
                    " " + self.VLINE + " Bitflipping: " + \
                    self.__get_progress_bar(self.TECHNIQUE_BAR_LEN, bitflip_rate, color=use_color,
                                            specific_char='*', technique_color=True) + \
-                   "   " + self.__get_printable_integer(self.state.progress_bitflip_amount) + "  " + self.VLINE + " \n"
+                   "   " + self.__get_printable_number(self.state.progress_bitflip_amount) + "  " + self.VLINE + " \n"
         return template
 
     def __get_ui_line5(self):
@@ -304,7 +304,7 @@ class FuzzerUI():
         template = " " + self.VRLINE + (25 * self.HLINE) + self.VLLINE + " Arithmetic:  " + \
                    self.__get_progress_bar(self.TECHNIQUE_BAR_LEN, arithmetic_rate, color=use_color,
                                            specific_char='*', technique_color=True) \
-                   + "   " + self.__get_printable_integer(self.state.progress_arithmetic_amount) +"  " + self.VLINE + "\n"
+                   + "   " + self.__get_printable_number(self.state.progress_arithmetic_amount) +"  " + self.VLINE + "\n"
         return template
 
     def __get_ui_line6(self):
@@ -318,15 +318,15 @@ class FuzzerUI():
             use_color = True
 
         if self.state.cycles != 0:
-            cycles = self.WARNING + self.BOLD + self.__get_printable_integer(self.state.cycles) + self.ENDC
+            cycles = self.WARNING + self.BOLD + self.__get_printable_number(self.state.cycles) + self.ENDC
         else:
-            cycles = self.__get_printable_integer(self.state.cycles)
+            cycles = self.__get_printable_number(self.state.cycles)
 
         template = " " + self.VLINE + " Cycles:            " + cycles + \
                    " " + self.VLINE + " Interesting: " + \
                    self.__get_progress_bar(self.TECHNIQUE_BAR_LEN, interesting_rate, color=use_color,
                                            specific_char='*', technique_color=True) + \
-                   "   " + self.__get_printable_integer(self.state.progress_interesting_amount) + "  " + self.VLINE + "\n"
+                   "   " + self.__get_printable_number(self.state.progress_interesting_amount) + "  " + self.VLINE + "\n"
         return template
 
     def __get_ui_line7(self):
@@ -338,11 +338,11 @@ class FuzzerUI():
             use_color = False
         else:
             use_color = True
-        template = " " + self.VLINE + " Level:        " + self.__get_printable_integer(self.state.level) + "/" + self.__get_printable_integer(self.state.max_level) \
+        template = " " + self.VLINE + " Level:        " + self.__get_printable_number(self.state.level) + "/" + self.__get_printable_number(self.state.max_level) \
                    + " " + self.VLINE + " Havoc:       " + \
                    self.__get_progress_bar(self.TECHNIQUE_BAR_LEN, havoc_rate, color=use_color,
                                            specific_char='*', technique_color=True) \
-                   + "   " + self.__get_printable_integer(self.state.progress_havoc_amount) + "  " + self.VLINE + "\n"
+                   + "   " + self.__get_printable_number(self.state.progress_havoc_amount) + "  " + self.VLINE + "\n"
         return template
 
     def __get_ui_line8(self):
@@ -359,17 +359,17 @@ class FuzzerUI():
         if self.state.hashes != 0:
             tmp_fav_ratio = 100.0 * (float(self.state.favorites) / float(self.state.hashes))
 
-        template = " " + self.VLINE + " Favs: " + self.__get_printable_integer(self.state.favorites) + "/" + \
-                   self.__get_printable_integer(self.state.hashes) + " " + self.__get_printable_float(tmp_fav_ratio, brackets=True) +\
+        template = " " + self.VLINE + " Favs: " + self.__get_printable_number(self.state.favorites) + "/" + \
+                   self.__get_printable_number(self.state.hashes) + " " + self.__get_printable_float(tmp_fav_ratio, brackets=True) +\
                    " " + self.VLINE + " Splicing:    " + self.__get_progress_bar(self.TECHNIQUE_BAR_LEN, specific_rate,
                                                                 color=use_color, specific_char='*',
                                                                 technique_color=True) + \
-                   "   " + self.__get_printable_integer(self.state.progress_specific_amount) + "  " + self.VLINE + "\n"
+                   "   " + self.__get_printable_number(self.state.progress_specific_amount) + "  " + self.VLINE + "\n"
         return template
 
     def __get_ui_line9(self):
-        template = " " + self.VLINE + " Pending:      " + self.__get_printable_integer(self.state.fav_pending) + "/" + \
-                   self.__get_printable_integer(self.state.path_pending) + \
+        template = " " + self.VLINE + " Pending:      " + self.__get_printable_number(self.state.fav_pending) + "/" + \
+                   self.__get_printable_number(self.state.path_pending) + \
                    " " + self.VRLINE + (23 * self.HLINE) + self.HDLINE + (16 * self.HLINE) + self.VLLINE + "\n"
         return template
 
@@ -377,14 +377,14 @@ class FuzzerUI():
         cpu_usage = self.__get_cpu_usage()
 
         if self.state.panics != 0:
-            panics = self.__get_printable_integer(self.state.panics, color=(self.FAIL + self.BOLD)) + " " + \
-                     self.__get_printable_integer(self.state.panics_unique, brackets=True,
+            panics = self.__get_printable_number(self.state.panics, color=(self.FAIL + self.BOLD)) + " " + \
+                     self.__get_printable_number(self.state.panics_unique, brackets=True,
                                                   color=(self.FAIL + self.BOLD))
         else:
-            panics = self.__get_printable_integer(0) + " " + self.__get_printable_integer(0, brackets=True)
+            panics = self.__get_printable_number(0) + " " + self.__get_printable_number(0, brackets=True)
 
-        template = " " + self.VLINE + " Skipped:      " + self.__get_printable_integer(self.state.fav_unfinished) + "/" + \
-                   self.__get_printable_integer(self.state.path_unfinished) + \
+        template = " " + self.VLINE + " Skipped:      " + self.__get_printable_number(self.state.fav_unfinished) + "/" + \
+                   self.__get_printable_number(self.state.path_unfinished) + \
                    " " + self.VLINE + " Panic:    " + panics + \
                    " " + self.VLINE + " CPU:     " + self.__get_printable_float(cpu_usage * 100.0, colored=True) + " " + self.VLINE + "\n"
         return template
@@ -393,13 +393,13 @@ class FuzzerUI():
         mem_usage = self.__get_mem_usage()
 
         if self.state.kasan_unique != 0:
-            kasan = self.__get_printable_integer(self.state.kasan, color=(self.FAIL + self.BOLD)) + " " + \
-                     self.__get_printable_integer(self.state.kasan_unique, brackets=True,
+            kasan = self.__get_printable_number(self.state.kasan, color=(self.FAIL + self.BOLD)) + " " + \
+                     self.__get_printable_number(self.state.kasan_unique, brackets=True,
                                                   color=(self.FAIL + self.BOLD))
         else:
-            kasan = self.__get_printable_integer(0) + " " + self.__get_printable_integer(0, brackets=True)
+            kasan = self.__get_printable_number(0) + " " + self.__get_printable_number(0, brackets=True)
 
-        template = " " + self.VLINE + " Payload-Size:     " + self.__get_printable_integer(self.state.payload_size) + \
+        template = " " + self.VLINE + " Payload-Size:     " + self.__get_printable_number(self.state.payload_size) + \
                    "B " + self.VLINE + " KASan:    " + kasan + " " + self.VLINE + " RAM:    " + \
                    " " + self.__get_printable_float(mem_usage * 100.0, colored=True) + " " + self.VLINE + "\n"
         return template
@@ -407,18 +407,18 @@ class FuzzerUI():
     def __get_ui_line12(self):
 
         if self.state.reloads_unique != 0:
-            reloads = self.__get_printable_integer(self.state.reloads, color=(self.FAIL + self.BOLD)) + " " + \
-                    self.__get_printable_integer(self.state.reloads_unique, brackets=True,
+            reloads = self.__get_printable_number(self.state.reloads, color=(self.FAIL + self.BOLD)) + " " + \
+                    self.__get_printable_number(self.state.reloads_unique, brackets=True,
                                                  color=(self.FAIL + self.BOLD))
         else:
-            reloads = self.__get_printable_integer(0) + " " + self.__get_printable_integer(0, brackets=True)
+            reloads = self.__get_printable_number(0) + " " + self.__get_printable_number(0, brackets=True)
 
         if len(self.state.technique) > self.TECHNIQUE_FIELD_LEN:
             technique = self.state.technique[:(self.TECHNIQUE_FIELD_LEN - 1)] + "."
         else:
             technique = self.state.technique
         technique = ((self.TECHNIQUE_FIELD_LEN - len(technique)) * ' ') + technique
-        template = " " + self.VLINE + " Total:             " + self.__get_printable_integer(self.state.total) + \
+        template = " " + self.VLINE + " Total:             " + self.__get_printable_number(self.state.total) + \
                    " " + self.VLINE + " Timeout:  " + reloads + \
                    " " + self.VLINE + " " + technique + " " + self.VLINE + "\n"
         return template
@@ -427,7 +427,7 @@ class FuzzerUI():
         return " " + self.LBEDGE + (25 * self.HLINE) + self.HULINE + (23 * self.HLINE) + self.HULINE + (16 * self.HLINE) + self.RBEDGE \
                + "\n" + (47 * ' ') + "\n"  + "\n" # + self.__hexdump(self.state.payload[0:0x60], max_length=0x60) + "\n"
 
-    def __get_printable_integer(self, value, brackets=False, color=""):
+    def __get_printable_number(self, value, brackets=False, color=""):
         if value >= 1000000000000:
             ret = str(value / 1000000000000.0)[:3]
             if ret[len(ret) - 2] == '.':
@@ -445,7 +445,17 @@ class FuzzerUI():
             if ret[len(ret) - 2] == '.':
                 ret = ret[:-2] + 'K'
         else:
-            ret = str(value)
+            if isinstance(value, int):
+                ret = str(value)
+            elif isinstance(value, float):
+                if value < 1:
+                    ret = "%.2f" % value
+                elif value < 10:
+                    ret = "%.1f" % value
+                elif value < 100:
+                    ret = "%.0f" % value
+            else:
+                raise
         if brackets:
             return ((4 - len(ret)) * ' ') + "(" + color + ret + self.ENDC + ")"
         return ((4 - len(ret)) * ' ') + color + ret + self.ENDC

@@ -117,7 +117,7 @@ class State:
         self.fav_pending = 0
         self.fav_unfinished = 0
 
-        self.payload = ""
+        self.payload = b""
 
     def get_performance(self):
         if len(self.performance_rb) == 0:
@@ -133,19 +133,19 @@ class State:
 
     def save_data(self):
         tmp = {}
-        for key, value in self.__dict__.iteritems():
+        for key, value in self.__dict__.items():
             if key == "runtime" or key == "last_hash_time":
                 tmp[key] = (time.time() - value)
             elif key == "performance_rb" or key == "max_performance_rb":
                 tmp[key] = list(value)
             elif key == "payload":
-                tmp[key] = base64.b64encode(value)
+                tmp[key] = str(base64.b64encode(value), "utf-8")
             elif not str(key).startswith("progress"):
                 tmp[key] = value
         return tmp
 
     def load_data(self, data):
-        for key, value in data.iteritems():
+        for key, value in data.items():
             if key == "runtime" or key == "last_hash_time":
                 setattr(self, key, (time.time() - value))
             elif key == "performance_rb":
@@ -155,7 +155,7 @@ class State:
                 for element in value:
                     self.max_performance_rb.append(element)
             elif key == "payload":
-                setattr(self, key, base64.b64decode(value))
+                setattr(self, key, base64.b64decode(value).decode("utf-8"))
             elif not str(key).startswith("progress"):
                 setattr(self, key, value)
         self.slaves_ready = 0

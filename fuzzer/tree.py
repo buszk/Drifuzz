@@ -540,17 +540,17 @@ class KaflTree:
     def __are_new_bits_present(self, new_bitmap):
         print(type(self.bitmap))
         print(type(new_bitmap))
-        print('are_new_bits_present')
+        log_tree('are_new_bits_present')
         cnt = 0
         for b in new_bitmap:
             if b != 255:
                 cnt += 1
-        print('new bitmap has %d bytes' % cnt)
+        log_tree('new bitmap has %d bytes' % cnt)
         cnt = 0
         for i in range(len(self.bitmap)):
             if self.bitmap[i] != 0:
                 cnt += 1
-        print('global bitmap has %d bytes' % cnt)
+        log_tree('global bitmap has %d bytes' % cnt)
         found = False
         counter = 0
         for i in range(len(new_bitmap)):
@@ -700,11 +700,15 @@ class KaflTree:
     def get_bitmap_values(self):
         count_bytes = 0
         bits_per_byte = 0
-        for e in self.bitmap:
-            if e != '\x00':
+        for i in range(self.bitmap_size):
+            e = self.bitmap[i]
+            # Just to be fool-proof
+            # log_tree(type(e), e)
+            # if e != '\x00' and e != 0 and e != b'\x00':
+            if e != 0:
                 count_bytes += 1
                 for b in (self.buckets):
-                    if ord(e) >= b+1:
+                    if e >= b+1:
                         bits_per_byte += 1
 
         ratio_coverage = 100.0 * (float(count_bytes) / float(self.bitmap_size))
