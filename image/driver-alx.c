@@ -44,6 +44,14 @@ void submit_kcov_trace(void *ptr, size_t size) {
   close(fd);
 }
 
+void req_reset() {
+  int fd;
+  uint64_t payload[] = {10};
+  fd = open("/dev/drifuzz", O_WRONLY);
+  write(fd, &payload, sizeof(payload));
+  close(fd);
+}
+
 int main(int argc, char **argv) {
   int fd;
   unsigned long *cover, n, i;
@@ -65,14 +73,14 @@ int main(int argc, char **argv) {
 
   system("[ -e /dev/drifuzz ] || mknod /dev/drifuzz c 248 0");
 
-  for (int i = 0; i < 100; i++) {
+  for (int i = 0; i < 4; i++) {
     if (ioctl(fd, KCOV_ENABLE, KCOV_TRACE_PC))
       perror("ioctl"), exit(1);
     __atomic_store_n(&cover[0], 0, __ATOMIC_RELAXED);
     exec_init();
     system("modprobe alx");
     system("ip link set dev enp0s3 up");
-    sleep(3);
+    sleep(0.5);
     system("ip link set dev enp0s3 down");
     system("rmmod alx");
     if (ioctl(fd, KCOV_DISABLE, 0))
@@ -87,5 +95,6 @@ int main(int argc, char **argv) {
     perror("munmap"), exit(1);
   if (close(fd))
     perror("close"), exit(1);
+  req_reset();
   return 0;
 }

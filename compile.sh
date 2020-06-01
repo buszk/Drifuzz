@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -x
+#set -x
 set -e
 
 BUILD_QEMU=0
@@ -10,6 +10,7 @@ BUILD_MODULE=0
 BUILD_IMAGE=0
 REBUILD_QEMU=0
 REBUILD_LINUX=0
+TARGET=
 
 while :; do
     case $1 in
@@ -30,6 +31,7 @@ while :; do
             BUILD_MLINUX=1
         ;;
         --build-image)
+            sudo pwd
             BUILD_IMAGE=1
         ;;
         --rebuild)
@@ -42,7 +44,12 @@ while :; do
         --rebuild-linux)
             REBUILD_LINUX=1
         ;;
-        *) break
+        --target)
+            shift
+            TARGET=$1
+        ;;
+        *)
+        break
     esac
     shift
 done
@@ -97,7 +104,11 @@ fi
 if [ "$BUILD_IMAGE" = 1 ]; then
 pushd $PWD
 sudo make INSTALL_MOD_PATH=$PWD/image/chroot -C linux-module-build -j4 modules_install
-(cd image && make && ./build-image.sh)
+if [ "$TARGET" != "" ]; then
+(cd image && make clean && make driver-$TARGET && ./build-image.sh)
+else
+(cd image && make clean && ./build-image.sh)
+fi
 popd
 fi
 

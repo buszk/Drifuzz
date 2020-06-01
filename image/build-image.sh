@@ -11,7 +11,7 @@ sudo debootstrap --include=vim,net-tools,iproute2,wireless-tools,wget,curl,opens
 
 sudo sed -i '/^root/ { s/:x:/::/ }' $DIR/etc/passwd
 echo 'T0:23:respawn:/sbin/getty -L ttyS0 115200 vt100' | sudo tee -a $DIR/etc/inittab
-printf '\nauto eth0\niface eth0 inet dhcp\n' | sudo tee -a $DIR/etc/network/interfaces
+#printf '\nauto eth0\niface eth0 inet dhcp\n' | sudo tee -a $DIR/etc/network/interfaces
 echo '/dev/root / ext4 defaults 0 0' | sudo tee -a $DIR/etc/fstab
 echo 'debugfs /sys/kernel/debug debugfs defaults 0 0' | sudo tee -a $DIR/etc/fstab
 echo 'securityfs /sys/kernel/security securityfs defaults 0 0' | sudo tee -a $DIR/etc/fstab
@@ -33,8 +33,13 @@ else
 # Build a disk image
 if [ -f driver ]; then
     sudo cp driver chroot/root
+    echo '#!/bin/bash' | sudo tee chroot/etc/rc.local
+    echo '/root/driver' | sudo tee -a chroot/etc/rc.local
+else
+    echo '' | sudo tee chroot/etc/rc.local
 fi
-dd if=/dev/zero of=$RELEASE.img bs=1M seek=$SEEK count=1
+
+sudo dd if=/dev/zero of=$RELEASE.img bs=1M seek=$SEEK count=1
 sudo mkfs.ext4 -F $RELEASE.img
 sudo mkdir -p /mnt/$DIR
 sudo mount -o loop $RELEASE.img /mnt/$DIR
