@@ -94,7 +94,7 @@ class qemu:
                     "-hda", "/home/buszk/Workspace/git/Drifuzz/image/buster.img",
                     "-kernel", "/home/buszk/Workspace/git/Drifuzz/linux-module-build/arch/x86_64/boot/bzImage",
                     "-append", "console=ttyS0 nokaslr root=/dev/sda earlyprintk=serial",
-                    "-snapshot", 
+                    "-snapshot",
                     "-enable-kvm",
                     "-k", "de",
                     "-m", "1G",
@@ -139,7 +139,7 @@ class qemu:
 
     def __del__(self):
         if not self.process:
-            return 
+            return
 
         os.system("kill -9 " + str(self.process.pid))
 
@@ -167,7 +167,7 @@ class qemu:
             pass
 
         try:
-            self.fs_shm.close() 
+            self.fs_shm.close()
         except:
             pass
 
@@ -230,6 +230,10 @@ class qemu:
 
     def start(self, verbose=False):
         print(self.cmd)
+        # This is to prevent subprocess Popen glitch.
+        # When multiple processes are forked close in time,
+        # Popen possibly hangs
+        time.sleep(1)
         # return
         if verbose:
         # if True:
@@ -443,7 +447,7 @@ class qemu:
                 if tmp_bitmap1 == tmp_bitmap2:
                     break
                 init = False
-                
+
         except:
             failed = True
 
@@ -458,7 +462,7 @@ class qemu:
             if not failed:
                 return tmp_bitmap2
             else:
-                return bitmap            
+                return bitmap
         except:
             self.timeout = True
             return bitmap

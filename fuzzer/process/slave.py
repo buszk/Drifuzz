@@ -199,9 +199,9 @@ class SlaveThread(threading.Thread):
     
     def interprocess_proto_handler(self):
         response = recv_msg(self.comm.to_slave_queues[self.slave_id], timeout=0.1)
-        
         if response is None:
             return
+        print('slave got cmd %d' % response.tag)
 
         if response.tag == KAFL_TAG_JOB:
             self.__respond_job_req(response)

@@ -2,6 +2,8 @@ import os
 import sys
 import time
 import signal
+import threading
+import traceback
 import multiprocessing
 from communicator import Communicator
 from process.master import MasterProcess
@@ -16,7 +18,11 @@ USE_UI = True
 
 def handle_pdb(sig, frame):
     import pdb
-    pdb.set_trace(frame)
+    # pdb.set_trace()
+    for th in threading.enumerate():
+        print(th)
+        traceback.print_stack(sys._current_frames()[th.ident])
+        print()
 
 def main():
     signal.signal(signal.SIGUSR1, handle_pdb)
@@ -59,7 +65,7 @@ def main():
     for i in range(num_processes):
         slave = SlaveThread(comm, i)
         slaves.append(slave)
-    
+
     comm.start()
     comm.create_shm()
 
@@ -69,9 +75,9 @@ def main():
     time.sleep(.01)
     if USE_UI:
         update_process.start()
-    
+
     print('Starting master loop')
-    try: 
+    try:
         master.loop()
     except KeyboardInterrupt:
         print('Received KeyboardInterrupt')
