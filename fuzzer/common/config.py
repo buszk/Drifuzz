@@ -219,8 +219,8 @@ class FuzzerConfiguration:
         # parser.add_argument('executable', metavar='<Fuzzer Executable>', action=FullPaths, type=parse_is_file,
         #                     help='Path to the fuzzer executable.')
         # parser.add_argument('mem', metavar='<RAM Size>', help='Size of virtual RAM (default: 300).', default=300, type=int)
-        # parser.add_argument('seed_dir', metavar='<Seed Directory>', action=FullPaths, type=parse_is_dir,
-        #                     help='Path to the seed directory.')
+        parser.add_argument('seed_dir', metavar='<Seed Directory>', action=FullPaths, type=parse_is_dir,
+                            help='Path to the seed directory.')
         parser.add_argument('work_dir', metavar='<Working Directory>', action=FullPaths, type=create_dir,
                             help='Path to the working directory.')
         #parser.add_argument('ip_filter', metavar='<IP-Filter>', type=parse_range_ip_filter,
@@ -273,6 +273,6 @@ class FuzzerConfiguration:
         """
         with open(self.argument_values['work_dir'] + "/config.json", 'r') as infile:
             dump = json.load(infile)
-            for key, value in dump.iteritems():
+            for key, value in dump.items():
                 setattr(self, key, value)
         self.load_old_state = True

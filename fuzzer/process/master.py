@@ -314,23 +314,23 @@ class MasterProcess:
         self.kafl_state.cycles = 0
         self.__start_processes()
 
-        # if self.config.load_old_state:
-        #     log_master("State exists!")
-        # else:
-        #     log_master("State does not exist!")
-        #     payloads = get_seed_files(self.config.argument_values['work_dir'] + "/corpus")
-        #     data = []
-        #     for payload in payloads:
-        #         bitmap = self.__request_bitmap(payload)
-        #         data.append((payload, bitmap))
-        #     send_msg(KAFL_INIT_BITMAP, data, self.comm.to_mapserver_queue)
-        #     self.payload = payloads[0]
-        self.payload = read_binary_file('./random_seed')
-        print('master requesting bitmap')
-        bitmap = self.__request_bitmap(self.payload)
-        print('master got bitmap')
-        data = [(self.payload, bitmap)]
-        send_msg(KAFL_INIT_BITMAP, data, self.comm.to_mapserver_queue)
+        if self.config.load_old_state:
+            log_master("State exists!")
+        else:
+            log_master("State does not exist!")
+            payloads = get_seed_files(self.config.argument_values['work_dir'] + "/corpus")
+            data = []
+            for payload in payloads:
+                bitmap = self.__request_bitmap(payload)
+                data.append((payload, bitmap))
+            send_msg(KAFL_INIT_BITMAP, data, self.comm.to_mapserver_queue)
+            self.payload = payloads[0]
+        # self.payload = read_binary_file('./random_seed')
+        # print('master requesting bitmap')
+        # bitmap = self.__request_bitmap(self.payload)
+        # print('master got bitmap')
+        # data = [(self.payload, bitmap)]
+        # send_msg(KAFL_INIT_BITMAP, data, self.comm.to_mapserver_queue)
         print('init fuzzing loop finish')
 
     def __calc_stage_iterations(self):
@@ -580,7 +580,7 @@ class MasterProcess:
         """
         with open(FuzzerConfiguration().argument_values['work_dir'] + "/master.json", 'r') as infile:
             dump = json.load(infile)
-            for key, value in dump.iteritems():
+            for key, value in dump.items():
                 if key == "kafl_state":
                     self.kafl_state.load_data(value)
                 else:

@@ -47,7 +47,7 @@ class MapserverState:
 
     def save_data(self):
         tmp = {}
-        for key, value in self.__dict__.iteritems():
+        for key, value in self.__dict__.items():
             if key == "last_hash_time":
                 if value:
                     tmp[key] = (time.time() - value)
@@ -56,7 +56,7 @@ class MapserverState:
         return tmp
 
     def load_data(self, data):
-        for key, value in data.iteritems():
+        for key, value in data.items():
             if key == "last_hash_time":
                 setattr(self, key, (time.time() - value))
             else:

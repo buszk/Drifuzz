@@ -32,6 +32,8 @@ class SlaveThread(threading.Thread):
     reproduce = None
     vm_ready = False
 
+    requested_input = False
+
 
     def __init__(self, comm, id):
         threading.Thread.__init__(self)
@@ -39,7 +41,7 @@ class SlaveThread(threading.Thread):
         self.slave_id = id
         self.config = FuzzerConfiguration()
         self.q = qemu(id)
-        self.model = Model(self.config, self.req_new_payload, self.send_bitmap,
+        self.model = Model(self.config, self.fetch_payload, self.send_bitmap,
                 self.__restart_vm)
         self.comm.register_model(self.slave_id, self.model)
         self.state = SlaveState.WAITING
@@ -149,8 +151,11 @@ class SlaveThread(threading.Thread):
             bitmap = bitmap_shm.read(self.bitmap_size)
             # Reply master's BITMAP cmd
             send_msg(KAFL_TAG_REQ_BITMAP, bitmap, self.comm.to_master_from_slave_queue, source = self.slave_id)
-            # Ask master for new payloads
-            send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
+            # Ask master for new payloads once
+            #   Transit from PROC_BITMAP to regular fuzzing
+            if not self.requested_input:
+                self.requested_input = True
+                send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
         elif self.state == SlaveState.PROC_TASK:
             bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
             bitmap_shm.seek(0)
@@ -177,7 +182,7 @@ class SlaveThread(threading.Thread):
             print("Error: slave thread in wrong state")
         self.state = SlaveState.WAITING
 
-    def req_new_payload(self):
+    def fetch_payload(self):
         if self.stopped():
             return None
         

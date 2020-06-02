@@ -45,7 +45,7 @@ opts = {
         'func': 'vm_kasan',
         'argbytes': 0,
         'argfmt': '',
-        'retfmt': '<Q'
+        'retfmt': ''
     },
     Command.REQ_RESET: {
         'func': 'req_reset',

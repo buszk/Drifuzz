@@ -465,7 +465,7 @@ class MapserverProcess:
         """
         with open(FuzzerConfiguration().argument_values['work_dir'] + "/mapserver.json", 'r') as infile:
             dump = json.load(infile)
-            for key, value in dump.iteritems():
+            for key, value in dump.items():
                 if key == "hash_list" or key == "shadow_map":
                     tmp = set()
                     for e in value:

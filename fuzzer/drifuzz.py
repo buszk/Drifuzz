@@ -10,11 +10,12 @@ from process.master import MasterProcess
 from process.slave import SlaveThread
 from process.mapserver import mapserver_loader
 from process.update import update_loader
+from common.debug import log_core, enable_logging
 from common.config import FuzzerConfiguration
 from common.util import prepare_working_dir, copy_seed_files, print_fail, \
     check_if_old_state_exits, print_exit_msg, check_state_exists, print_pre_exit_msg, ask_for_purge, print_warning
 
-USE_UI = True
+USE_UI = False
 
 def handle_pdb(sig, frame):
     import pdb
@@ -32,28 +33,28 @@ def main():
     config = FuzzerConfiguration()
     num_processes = config.argument_values['p']
 
-    prepare_working_dir(config.argument_values['work_dir'], purge=True)
-    # if config.argument_values['Purge'] and check_if_old_state_exits(config.argument_values['work_dir']):
-    #     print_warning("Old workspace found!")
-    #     if ask_for_purge("PURGE"):
-    #         print_warning("Wiping old workspace...")
-    #         prepare_working_dir(config.argument_values['work_dir'], purge=config.argument_values['Purge'])
-    #         time.sleep(2)
-    #     else:
-    #         print_fail("Aborting...")
-    #         return 0
+    # prepare_working_dir(config.argument_values['work_dir'], purge=True)
+    if config.argument_values['Purge'] and check_if_old_state_exits(config.argument_values['work_dir']):
+        print_warning("Old workspace found!")
+        if ask_for_purge("PURGE"):
+            print_warning("Wiping old workspace...")
+            prepare_working_dir(config.argument_values['work_dir'], purge=config.argument_values['Purge'])
+            time.sleep(2)
+        else:
+            print_fail("Aborting...")
+            return 0
 
-    # if not check_if_old_state_exits(config.argument_values['work_dir']):
-    #     if not prepare_working_dir(config.argument_values['work_dir'], purge=config.argument_values['Purge']):
-    #         print_fail("Working directory is weired or corrupted...")
-    #         return 1
-    #     if not copy_seed_files(config.argument_values['work_dir'], config.argument_values['seed_dir']):
-    #         print_fail("Seed directory is empty...")
-    #         return 1
-    #     config.save_data()
-    # else:
-    #     log_core("Old state exist -> loading...")
-    #     config.load_data()
+    if not check_if_old_state_exits(config.argument_values['work_dir']):
+        if not prepare_working_dir(config.argument_values['work_dir'], purge=config.argument_values['Purge']):
+            print_fail("Working directory is weired or corrupted...")
+            return 1
+        if not copy_seed_files(config.argument_values['work_dir'], config.argument_values['seed_dir']):
+            print_fail("Seed directory is empty...")
+            return 1
+        config.save_data()
+    else:
+        log_core("Old state exist -> loading...")
+        config.load_data()
 
     comm = Communicator(num_processes = num_processes)
     master = MasterProcess(comm)
