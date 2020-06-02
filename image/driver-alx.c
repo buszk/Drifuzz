@@ -73,7 +73,7 @@ int main(int argc, char **argv) {
 
   system("[ -e /dev/drifuzz ] || mknod /dev/drifuzz c 248 0");
 
-  for (int i = 0; i < 4; i++) {
+  for (int i = 0; i < 1000; i++) {
     if (ioctl(fd, KCOV_ENABLE, KCOV_TRACE_PC))
       perror("ioctl"), exit(1);
     __atomic_store_n(&cover[0], 0, __ATOMIC_RELAXED);
