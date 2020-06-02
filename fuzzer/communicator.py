@@ -100,9 +100,18 @@ class Communicator:
         self.to_master_from_slave_queue = multiprocessing.Queue()
         self.to_mapserver_queue = multiprocessing.Queue()
 
+        # Call cancel_join_thread to ensure processes can exit properly
+        #   when received SIGINT
+        self.to_update_queue.cancel_join_thread()
+        self.to_master_queue.cancel_join_thread()
+        self.to_master_from_mapserver_queue.cancel_join_thread()
+        self.to_master_from_slave_queue.cancel_join_thread()
+        self.to_mapserver_queue.cancel_join_thread()
+
         self.to_slave_queues = []
         for i in range(num_processes):
             self.to_slave_queues.append(multiprocessing.Queue())
+            self.to_slave_queues[i].cancel_join_thread()
             self.socks.append(SocketThread(qemu_socket_prefix + str(i)))
 
         self.slave_locks_bitmap = []

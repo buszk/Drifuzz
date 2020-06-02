@@ -17,6 +17,7 @@ You should have received a copy of the GNU General Public License
 along with QEMU-PT.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import time
 import json
 import base64
 
@@ -567,7 +568,6 @@ class MasterProcess:
             if key == "kafl_state":
                 dump[key] = value.save_data()
 
-        print(dump)
         with open(self.config.argument_values['work_dir'] + "/master.json", 'w') as outfile:
             json.dump(dump, outfile, default=json_dumper)
 

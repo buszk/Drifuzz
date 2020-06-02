@@ -19,6 +19,7 @@ along with QEMU-PT.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
 import time
+import signal
 
 import mmh3, base64, lz4
 import collections
@@ -43,20 +44,33 @@ class SetEncoder(json.JSONEncoder):
         return json.JSONEncoder.default(self, obj)
 
 
+def handle_pdb(sig, frame):
+    import sys
+    import pdb
+    import threading
+    import traceback
+    for th in threading.enumerate():
+        print(th)
+        traceback.print_stack(sys._current_frames()[th.ident])
+        print()
+
 def mapserver_loader(comm):
+    signal.signal(signal.SIGUSR1, handle_pdb)
+
     log_mapserver("PID: " + str(os.getpid()))
-    mapserver_process = None
+
     try:
-        print('creating mapserver process')
         mapserver_process = MapserverProcess(comm)
-        print('mapserver created')
         mapserver_process.loop()
     except KeyboardInterrupt:
+        # print('mapserver keyboard interrupt')
         if mapserver_process:
-            mapserver_process.comm.slave_termination.value = True
+            print('mapserver saving')
             mapserver_process.treemap.save_data()
             mapserver_process.save_data()
-            log_mapserver("Date saved!")
+            print('mapserver saved')
+
+
 
 
 class MapserverProcess:
@@ -97,26 +111,18 @@ class MapserverProcess:
         # self.abortion_threshold = self.config.config_values['ABORTION_TRESHOLD']
         self.abortion_threshold = 5
 
-        #self.q = qemu(1337, self.config)
-        #self.q.start()
-
         self.ring_buffers = []
 
-        # for e in range(self.config.argument_values['p']):
-        for e in range(1):
+        for e in range(self.config.argument_values['p']):
             self.ring_buffers.append(collections.deque(maxlen=30))
 
-        # if self.config.load_old_state:
-        #     self.load_data()
-        #     self.treemap = KaflTree.load_data(enable_graphviz=self.enable_graphviz)
-        # else:
-        #     msg = recv_msg(self.comm.to_mapserver_queue)
-        #     self.mapserver_state_obj.pending = len(msg.data)
-        #     self.treemap = KaflTree(msg.data, enable_graphviz=self.enable_graphviz)
-        print('mapserver waiting')
-        msg = recv_msg(self.comm.to_mapserver_queue)
-        self.mapserver_state_obj.pending = len(msg.data)
-        self.treemap = KaflTree(msg.data, enable_graphviz=self.enable_graphviz)
+        if self.config.load_old_state:
+            self.load_data()
+            self.treemap = KaflTree.load_data(enable_graphviz=self.enable_graphviz)
+        else:
+            msg = recv_msg(self.comm.to_mapserver_queue)
+            self.mapserver_state_obj.pending = len(msg.data)
+            self.treemap = KaflTree(msg.data, enable_graphviz=self.enable_graphviz)
 
     def __restart_vm(self):
         while True:

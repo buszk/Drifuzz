@@ -733,6 +733,7 @@ class KaflTree:
     def save_data(self):
         ignore = ["bitmap_fd", "crash_bitmap_fd", "kasan_bitmap_fd", "timeout_bitmap_fd", "bitmap", "crash_bitmap", "kasan_bitmap", "timeout_bitmap"]
         dump = {}
+        print('saving tree data')
         for key, value in self.__dict__.items():
             if key != 'graph' and key not in ignore:
                 dump[key] = value
@@ -740,6 +741,7 @@ class KaflTree:
         log_tree(str(dump))
         with open(FuzzerConfiguration().argument_values['work_dir'] + "/tree.json", 'w') as outfile:
             json.dump(dump, outfile, default=json_dumper)
+        print('tree data saved')
 
     @classmethod
     def load_data(cls, enable_graphviz=False):

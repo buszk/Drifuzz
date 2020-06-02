@@ -15,7 +15,7 @@ from common.config import FuzzerConfiguration
 from common.util import prepare_working_dir, copy_seed_files, print_fail, \
     check_if_old_state_exits, print_exit_msg, check_state_exists, print_pre_exit_msg, ask_for_purge, print_warning
 
-USE_UI = False
+USE_UI = True
 
 def handle_pdb(sig, frame):
     import pdb
@@ -70,10 +70,12 @@ def main():
     comm.start()
     comm.create_shm()
 
+
+    mapserver_process.start()
+
     for slave in slaves:
         slave.start()
-    mapserver_process.start()
-    time.sleep(.01)
+    
     if USE_UI:
         update_process.start()
 
@@ -81,15 +83,20 @@ def main():
     try:
         master.loop()
     except KeyboardInterrupt:
-        print('Received KeyboardInterrupt')
-        comm.stop()
+        print('Saving data')
+        # Wait for child processes to properly exit
+        mapserver_process.join()
+        if USE_UI:
+            update_process.join()
+        
+        # Properly stop threads
         for slave in slaves:
             slave.stop()
-        mapserver_process.terminate()
-        if USE_UI:
-            update_process.terminate()
-        print('Saving master state')
+        # Stop communicator last because Queues may be in used
+        comm.stop()
         master.save_data()
+        print('Data saved')
+        
 
 
 if __name__ == "__main__":
