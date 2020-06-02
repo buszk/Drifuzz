@@ -5,7 +5,6 @@ set -e
 
 BUILD_QEMU=0
 BUILD_LINUX=0
-BUILD_MLINUX=0
 BUILD_MODULE=0
 BUILD_IMAGE=0
 REBUILD_QEMU=0
@@ -26,9 +25,6 @@ while :; do
         ;;
         --build-module)
             BUILD_MODULE=1
-        ;;
-        --build-mlinux)
-            BUILD_MLINUX=1
         ;;
         --build-image)
             sudo pwd
@@ -67,21 +63,8 @@ make -C qemu-build -j4
 popd
 fi
 
-# compile linux kernel
-if [ "$BUILD_LINUX" = 1 ]; then
-pushd $PWD
-if [ ! -d linux-build ] || [ "$REBUILD_LINUX" = 1 ]; then
-rm -rf linux-build
-mkdir linux-build
-(cd linux && make O=../linux-build allnoconfig)
-cp .config linux-build
-fi
-make -C linux-build -j4
-popd
-fi
-
 # compile modular linux kernel
-if [ "$BUILD_MLINUX" = 1 ]; then
+if [ "$BUILD_LINUX" = 1 ]; then
 pushd $PWD
 if [ ! -d linux-module-build ]; then
 rm -rf linux-module-build
