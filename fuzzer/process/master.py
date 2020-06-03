@@ -45,7 +45,7 @@ class MasterProcess:
 
     HAVOC_MULTIPLIER = 1.0
 
-    def __init__(self, comm):
+    def __init__(self, comm, reload=False):
         self.comm = comm
         self.kafl_state = State()
         self.payload = ""
@@ -74,8 +74,10 @@ class MasterProcess:
         # if not self.config.argument_values['D']:
         #     self.use_effector_map = False
 
-        # if self.config.load_old_state:
-        #     self.load_data()
+        self.load_old_state = False
+        if reload:
+            self.load_old_state = True
+            self.load_data()
 
         # log_master("Use effector maps: " + str(self.use_effector_map))
 
@@ -88,8 +90,8 @@ class MasterProcess:
                 send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
 
         self.kafl_state.loading = False
-        # if not self.config.load_old_state:
-            # self.kafl_state.runtime = time.time()
+        if not self.load_old_state:
+            self.kafl_state.runtime = time.time()
         self.kafl_state.runtime = time.time()
         print('KAFL_TAG_OUTPUT')
         send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
@@ -315,8 +317,9 @@ class MasterProcess:
         self.kafl_state.cycles = 0
         self.__start_processes()
 
-        if self.config.load_old_state:
+        if self.load_old_state:
             log_master("State exists!")
+            self.payload = self.kafl_state.payload
         else:
             log_master("State does not exist!")
             payloads = get_seed_files(self.config.argument_values['work_dir'] + "/corpus")

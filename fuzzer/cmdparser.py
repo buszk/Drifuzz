@@ -4,11 +4,12 @@ from enum import IntEnum
 class Command(IntEnum):
     WRITE = 1
     READ = 2
-    EXEC_INIT = 3
-    EXEC_EXIT = 4
-    READY = 5
-    VM_KASAN = 6
-    REQ_RESET = 7
+    DMA_BUF = 3
+    EXEC_INIT = 4
+    EXEC_EXIT = 5
+    READY = 6
+    VM_KASAN = 7
+    REQ_RESET = 8
 
 opts = {
     Command.WRITE: {
@@ -22,6 +23,12 @@ opts = {
         'argbytes': 24,
         'argfmt': '<QQQ',
         'retfmt': '<Q'
+    },
+    Command.DMA_BUF: {
+        'func': 'dma_buf',
+        'argbytes': 8,
+        'argfmt': '<Q',
+        'retfmt': ''
     },
     Command.EXEC_INIT: {
         'func': 'exec_init',

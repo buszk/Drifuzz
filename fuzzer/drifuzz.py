@@ -32,17 +32,18 @@ def main():
 
     config = FuzzerConfiguration()
     num_processes = config.argument_values['p']
+    reload = False
 
     # prepare_working_dir(config.argument_values['work_dir'], purge=True)
     if config.argument_values['Purge'] and check_if_old_state_exits(config.argument_values['work_dir']):
         print_warning("Old workspace found!")
-        if ask_for_purge("PURGE"):
-            print_warning("Wiping old workspace...")
-            prepare_working_dir(config.argument_values['work_dir'], purge=config.argument_values['Purge'])
-            time.sleep(2)
-        else:
-            print_fail("Aborting...")
-            return 0
+        # if ask_for_purge("PURGE"):
+        print_warning("Wiping old workspace...")
+        prepare_working_dir(config.argument_values['work_dir'], purge=config.argument_values['Purge'])
+        time.sleep(2)
+        # else:
+        #     print_fail("Aborting...")
+        #     return 0
 
     if not check_if_old_state_exits(config.argument_values['work_dir']):
         if not prepare_working_dir(config.argument_values['work_dir'], purge=config.argument_values['Purge']):
@@ -55,10 +56,11 @@ def main():
     else:
         log_core("Old state exist -> loading...")
         config.load_data()
+        reload = True
 
     comm = Communicator(num_processes = num_processes)
-    master = MasterProcess(comm)
-    mapserver_process = multiprocessing.Process(name='MAPSERVER', target=mapserver_loader, args=(comm,))
+    master = MasterProcess(comm, reload=reload)
+    mapserver_process = multiprocessing.Process(name='MAPSERVER', target=mapserver_loader, args=(comm,reload))
     if USE_UI:
         update_process = multiprocessing.Process(name='UPDATE', target=update_loader, args=(comm,))
 

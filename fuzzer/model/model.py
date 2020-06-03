@@ -64,17 +64,31 @@ class Model(object):
         self.cur += 8
         return res
 
+    def get_dma_data(self, size):
+        if not self.payload:
+            return b'A'*size
+        if self.cur + size > self.payload_len:
+            self.cur = 0
+        res = self.payload[self.cur: self.cur+size]
+        self.cur += size
+        return res
+
     def handle(self, type:str, *args):
         return getattr(self, f"handle_"+type)(*args)
 
     def handle_write(self, region, addr, size, val):
-        self.log.append("write #%d[%lx][%d] =  %x" % (region, addr, size, val))
+        # self.log.append("write #%d[%lx][%d] =  %x" % (region, addr, size, val))
         self.log_file.write("[%.4f] write #%d[%lx][%d] =  %x\n" % (time.time(), region, addr, size, val))
 
     def handle_read(self, region, addr, size):
         ret = self.get_data(size)
-        self.log.append("read  #%d[%lx][%d] as %x" % (region, addr, size, ret))
+        # self.log.append("read  #%d[%lx][%d] as %x" % (region, addr, size, ret))
         self.log_file.write("[%.4f] read  #%d[%lx][%d] as %x\n" % (time.time(), region, addr, size, ret))
+        return (ret,)
+    
+    def handle_dma_buf(self, size):
+        ret = self.get_dma_data(size)
+        self.log_file.write("[%.4f] dma_buf [%x]\n" % (time.time(), size))
         return (ret,)
 
     def handle_reset(self):

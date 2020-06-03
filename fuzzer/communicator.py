@@ -66,7 +66,9 @@ class SocketThread (threading.Thread):
                             break            
                         if ret != None and opt['retfmt'] != '':
                             _ret = struct.pack(opt['retfmt'], *ret)
-                            connection.send(_ret)        
+                            connection.send(_ret)
+                        elif ret != None and isinstance(ret[0], bytes):
+                            connection.send(ret[0])
 
                     except socket.timeout:
                         pass

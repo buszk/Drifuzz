@@ -54,13 +54,13 @@ def handle_pdb(sig, frame):
         traceback.print_stack(sys._current_frames()[th.ident])
         print()
 
-def mapserver_loader(comm):
+def mapserver_loader(comm, reload):
     signal.signal(signal.SIGUSR1, handle_pdb)
 
     log_mapserver("PID: " + str(os.getpid()))
 
     try:
-        mapserver_process = MapserverProcess(comm)
+        mapserver_process = MapserverProcess(comm, reload=reload)
         mapserver_process.loop()
     except KeyboardInterrupt:
         # print('mapserver keyboard interrupt')
@@ -74,7 +74,7 @@ def mapserver_loader(comm):
 
 
 class MapserverProcess:
-    def __init__(self, comm, initial=True):
+    def __init__(self, comm, initial=True, reload=False):
 
         self.comm = comm
         self.mapserver_state_obj = MapserverState()
@@ -116,7 +116,7 @@ class MapserverProcess:
         for e in range(self.config.argument_values['p']):
             self.ring_buffers.append(collections.deque(maxlen=30))
 
-        if self.config.load_old_state:
+        if reload:
             self.load_data()
             self.treemap = KaflTree.load_data(enable_graphviz=self.enable_graphviz)
         else:

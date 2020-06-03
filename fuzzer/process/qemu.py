@@ -105,6 +105,8 @@ class qemu:
                     "-device", "drifuzz,bitmap=" + self.bitmap_filename + \
                         ",bitmap_size=" + str(self.bitmap_size) + \
                         ",socket=" + self.socket_path]
+        # self.cmd = ["gdb", "-ex", "handle SIGUSR1 nostop noprint", "-ex", "r", "--args"] +\
+        #         self.cmd
         self.kafl_shm_f = None
         self.kafl_shm   = None
         self.fs_shm_f   = None

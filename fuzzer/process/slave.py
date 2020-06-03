@@ -153,9 +153,9 @@ class SlaveThread(threading.Thread):
             send_msg(KAFL_TAG_REQ_BITMAP, bitmap, self.comm.to_master_from_slave_queue, source = self.slave_id)
             # Ask master for new payloads once
             #   Transit from PROC_BITMAP to regular fuzzing
-            if not self.requested_input:
-                self.requested_input = True
-                send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
+            # if not self.requested_input:
+            #     self.requested_input = True
+            #     send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
         elif self.state == SlaveState.PROC_TASK:
             bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
             bitmap_shm.seek(0)
@@ -233,7 +233,7 @@ class SlaveThread(threading.Thread):
         self.q.start(verbose=v)
         # self.comm.reload_semaphore.release()
         print('started qemu')
-        # send_msg(KAFL_TAG_REQ, self.q.qemu_id, self.comm.to_master_queue, source=self.slave_id)
+        send_msg(KAFL_TAG_REQ, self.q.qemu_id, self.comm.to_master_queue, source=self.slave_id)
         while not self.stopped():
             #try:
             # if self.comm.slave_termination.value:

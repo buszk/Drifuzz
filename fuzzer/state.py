@@ -155,7 +155,7 @@ class State:
                 for element in value:
                     self.max_performance_rb.append(element)
             elif key == "payload":
-                setattr(self, key, base64.b64decode(value).decode("utf-8"))
+                setattr(self, key, base64.b64decode(value))
             elif not str(key).startswith("progress"):
                 setattr(self, key, value)
         self.slaves_ready = 0
