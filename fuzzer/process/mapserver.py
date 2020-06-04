@@ -58,7 +58,7 @@ def mapserver_loader(comm, reload):
     signal.signal(signal.SIGUSR1, handle_pdb)
 
     log_mapserver("PID: " + str(os.getpid()))
-
+    mapserver_process = None
     try:
         mapserver_process = MapserverProcess(comm, reload=reload)
         mapserver_process.loop()

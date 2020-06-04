@@ -223,6 +223,7 @@ class FuzzerConfiguration:
                             help='Path to the seed directory.')
         parser.add_argument('work_dir', metavar='<Working Directory>', action=FullPaths, type=create_dir,
                             help='Path to the working directory.')
+        parser.add_argument('target', type=str, help='Hardware to fuzz.')
         #parser.add_argument('ip_filter', metavar='<IP-Filter>', type=parse_range_ip_filter,
         #                    help='Instruction pointer filter range.')
 

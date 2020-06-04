@@ -40,7 +40,7 @@ class SlaveThread(threading.Thread):
         self.comm = comm
         self.slave_id = id
         self.config = FuzzerConfiguration()
-        self.q = qemu(id)
+        self.q = qemu(id, config=self.config)
         self.model = Model(id, self.config, self.fetch_payload, self.send_bitmap,
                 self.__restart_vm)
         self.comm.register_model(self.slave_id, self.model)

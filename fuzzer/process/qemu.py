@@ -90,6 +90,7 @@ class qemu:
         #             "-device drifuzz,bitmap=" + self.bitmap_filename + \
         #                 ",bitmap_size=" + str(self.bitmap_size) + \
         #                 ",socket=" + self.socket_path + " " \
+        target = self.config.argument_values['target']
         self.cmd = ["/home/buszk/Workspace/git/Drifuzz/qemu-build/x86_64-softmmu/qemu-system-x86_64",
                     "-hda", "/home/buszk/Workspace/git/Drifuzz/image/buster.img",
                     "-kernel", "/home/buszk/Workspace/git/Drifuzz/linux-module-build/arch/x86_64/boot/bzImage",
@@ -100,7 +101,7 @@ class qemu:
                     "-m", "1G",
                     "-nographic",
                     "-net", "user",
-                    "-net", "nic,model=alx",
+                    "-net", "nic,model=%s" % target,
                     "-machine", "kernel-irqchip=off",
                     "-device", "drifuzz,bitmap=" + self.bitmap_filename + \
                         ",bitmap_size=" + str(self.bitmap_size) + \
