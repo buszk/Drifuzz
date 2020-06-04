@@ -35,13 +35,13 @@ class SlaveThread(threading.Thread):
     requested_input = False
 
 
-    def __init__(self, comm, id):
+    def __init__(self, comm, id, reload=False):
         threading.Thread.__init__(self)
         self.comm = comm
         self.slave_id = id
         self.config = FuzzerConfiguration()
         self.q = qemu(id)
-        self.model = Model(self.config, self.fetch_payload, self.send_bitmap,
+        self.model = Model(id, self.config, self.fetch_payload, self.send_bitmap,
                 self.__restart_vm)
         self.comm.register_model(self.slave_id, self.model)
         self.state = SlaveState.WAITING
@@ -53,6 +53,9 @@ class SlaveThread(threading.Thread):
         self.comm.slave_locks_bitmap[self.slave_id].acquire()
     
         self.reproduce = self.config.argument_values['reproduce']
+
+        if reload:
+            self.model.load_data()
         
 
     def __del__(self):
@@ -241,6 +244,8 @@ class SlaveThread(threading.Thread):
             self.interprocess_proto_handler()
             #except:
             #    return
+        if not self.reproduce or self.reproduce == "":
+            self.model.save_data()
 
     def run(self):
         self.loop()

@@ -38,7 +38,7 @@ def main():
     # prepare_working_dir(config.argument_values['work_dir'], purge=True)
 
     comm = Communicator(num_processes = num_processes)
-    slave = SlaveThread(comm, 0)
+    slave = SlaveThread(comm, 0, reload=True)
     
     comm.start()
     comm.create_shm()

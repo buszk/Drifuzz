@@ -34,16 +34,11 @@ def main():
     num_processes = config.argument_values['p']
     reload = False
 
-    # prepare_working_dir(config.argument_values['work_dir'], purge=True)
     if config.argument_values['Purge'] and check_if_old_state_exits(config.argument_values['work_dir']):
         print_warning("Old workspace found!")
-        # if ask_for_purge("PURGE"):
         print_warning("Wiping old workspace...")
         prepare_working_dir(config.argument_values['work_dir'], purge=config.argument_values['Purge'])
         time.sleep(2)
-        # else:
-        #     print_fail("Aborting...")
-        #     return 0
 
     if not check_if_old_state_exits(config.argument_values['work_dir']):
         if not prepare_working_dir(config.argument_values['work_dir'], purge=config.argument_values['Purge']):
@@ -66,20 +61,21 @@ def main():
 
     slaves = []
     for i in range(num_processes):
-        slave = SlaveThread(comm, i)
+        slave = SlaveThread(comm, i, reload=reload)
         slaves.append(slave)
 
     comm.start()
     comm.create_shm()
 
+    if USE_UI:
+        update_process.start()
+        time.sleep(.1)
 
     mapserver_process.start()
 
     for slave in slaves:
         slave.start()
     
-    if USE_UI:
-        update_process.start()
 
     print('Starting master loop')
     try:
