@@ -143,13 +143,13 @@ class Model(object):
         
         return (0,)
 
-    def __submit_case(self, kasan):
+    def __submit_case(self, kasan=False, timeout=False):
         elapsed = time.time() - self.init_time
         print("Time spent:", elapsed)
-        self.submit_res_cb(time=elapsed, kasan=kasan, payload=self.payload)
+        self.submit_res_cb(time=elapsed, kasan=kasan, timeout=timeout, payload=self.payload)
 
     def handle_exec_exit(self):
-        self.__submit_case(False)
+        self.__submit_case()
         return (0,)
 
     def handle_vm_ready(self):
@@ -158,13 +158,20 @@ class Model(object):
 
     def handle_vm_kasan(self):
         print("VM enters kasan report")
-        self.__submit_case(True)
+        self.__submit_case(kasan=True)
         self.reset_cb()
         return (0,)
 
     def handle_req_reset(self):
         print("VM req hard reset")
         self.reset_cb()
+    
+    def handle_exec_timeout(self):
+        print("Execution timed out")
+        self.__submit_case(timeout=True)
+        self.reset_cb()
+        return (0,)
+        
 
     def save_data(self):
         dump = {}

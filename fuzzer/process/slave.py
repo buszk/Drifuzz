@@ -76,7 +76,7 @@ class SlaveThread(threading.Thread):
         
         while True:
             self.q.__del__()
-            self.q = qemu(self.slave_id)
+            self.q = qemu(self.slave_id, config=self.config)
             if self.q.start():
                 break
             else:
@@ -145,7 +145,7 @@ class SlaveThread(threading.Thread):
             
         print('bitmap covers %d bytes; global bitmap covers %d bytes' % (result, global_cnt))
 
-    def send_bitmap(self, time = 10, kasan = False, payload = None):
+    def send_bitmap(self, time = 10, kasan = False, timeout = False, payload = None):
         self.exit_if_reproduce()
 
         if self.state == SlaveState.PROC_BITMAP:
@@ -173,7 +173,7 @@ class SlaveThread(threading.Thread):
                 mapserver_payload_shm.seek(0)
                 mapserver_payload_shm.write(struct.pack('<I', len(payload)))
                 mapserver_payload_shm.write(payload)
-            result = FuzzingResult(0, False, False, kasan, self.affected_bytes[0],
+            result = FuzzingResult(0, False, timeout, kasan, self.affected_bytes[0],
                     self.slave_id, time, reloaded=False, new_bits=hnb, qid=self.slave_id)
             # Notify mapserver the result
             send_msg(KAFL_TAG_RESULT, [result], self.comm.to_mapserver_queue, source=self.slave_id)

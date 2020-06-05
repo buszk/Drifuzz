@@ -10,6 +10,7 @@ class Command(IntEnum):
     READY = 6
     VM_KASAN = 7
     REQ_RESET = 8
+    EXEC_TIMEOUT = 9
 
 opts = {
     Command.WRITE: {
@@ -56,6 +57,12 @@ opts = {
     },
     Command.REQ_RESET: {
         'func': 'req_reset',
+        'argbytes': 0,
+        'argfmt': '',
+        'retfmt': ''
+    },
+    Command.EXEC_TIMEOUT: {
+        'func': 'exec_timeout',
         'argbytes': 0,
         'argfmt': '',
         'retfmt': ''

@@ -33,6 +33,7 @@ enum ACTIONS {
 	SUBMIT_KCOV_TRACE,
 	KASAN,
 	REQ_RESET,
+	EXEC_TIMEOUT,
 };
 
 struct qemu_adapter {
@@ -101,6 +102,12 @@ static void handle_exec_init(void) {
 static void handle_exec_exit(void) {
     if (adapter) {
         writeq(EXEC_EXIT, adapter->hw_addr + CMD_ADDR);
+		writeq(ACT, adapter->hw_addr);
+    }
+}
+static void handle_exec_timeout(void) {
+    if (adapter) {
+        writeq(EXEC_TIMEOUT, adapter->hw_addr + CMD_ADDR);
 		writeq(ACT, adapter->hw_addr);
     }
 }
@@ -190,6 +197,11 @@ static int handle_command(void* buffer, size_t len) {
 	case REQ_RESET:
 		WARN_ON(len != 0x8);
 		handle_req_reset();
+		return 0x8;
+	case EXEC_TIMEOUT:
+		WARN_ON(len != 0x8);
+		handle_exec_timeout();
+		return 0x8;
 	default:
 		printk(KERN_INFO "Unknow action\n");
 		return 0x4;
