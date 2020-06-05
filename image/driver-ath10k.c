@@ -36,6 +36,14 @@ void exec_exit() {
   close(fd);
 }
 
+void exec_timeout() {
+  int fd;
+  uint64_t act = 11;
+  fd = open("/dev/drifuzz", O_WRONLY);
+  write(fd, &act, sizeof(act));
+  close(fd);
+}
+
 void submit_kcov_trace(void *ptr, size_t size) {
   int fd;
   uint64_t payload[] = {8, (uint64_t)ptr, (uint64_t)size};
@@ -74,20 +82,32 @@ int main(int argc, char **argv) {
   system("[ -e /dev/drifuzz ] || mknod /dev/drifuzz c 248 0");
 
   for (int i = 0; i < 1000; i++) {
+    int stat;
+    int timeout=0;
     if (ioctl(fd, KCOV_ENABLE, KCOV_TRACE_PC))
       perror("ioctl"), exit(1);
     __atomic_store_n(&cover[0], 0, __ATOMIC_RELAXED);
     exec_init();
-    system("modprobe alx");
-    system("ip link set dev enp0s3 up");
-    sleep(2);
-    system("ip link set dev enp0s3 down");
-    system("rmmod alx");
+    stat = system("timeout 5s modprobe ath10k_pci") >> 8;
+    if (stat == 124) {
+        timeout=1;
+        goto exec_end;
+    }
+    system("sleep 0.5");
+    stat = system("timeout 5s rmmod ath10k_pci") >> 8;
+    if (stat == 124) {
+        timeout=1;
+        goto exec_end;
+    }
+exec_end:
     if (ioctl(fd, KCOV_DISABLE, 0))
       perror("ioctl"), exit(1);
     n = __atomic_load_n(&cover[0], __ATOMIC_RELAXED);
     printf("%ld traces detected first: %lx\n", n, __atomic_load_n(&cover[1], __ATOMIC_RELAXED));
-    exec_exit();
+    if (!timeout)
+        exec_exit();
+    else
+        exec_timeout();
   }
 
   /* Free resources. */
