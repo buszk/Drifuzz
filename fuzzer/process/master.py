@@ -34,6 +34,7 @@ from common.util import get_seed_files, check_state_exists, json_dumper
 from common.util import read_binary_file
 from common.config import FuzzerConfiguration
 from common.debug import log_master
+from model.globalmodel import GlobalModel
 from shutil import copyfile
 
 
@@ -49,6 +50,7 @@ class MasterProcess:
         self.comm = comm
         self.kafl_state = State()
         self.payload = ""
+
 
         self.counter = 0
         self.round_counter = 0
@@ -73,6 +75,8 @@ class MasterProcess:
         self.refresh_rate = 0.25
         # if not self.config.argument_values['D']:
         #     self.use_effector_map = False
+
+        self.global_model = GlobalModel(self.config)
 
         self.load_old_state = False
         if reload:
@@ -205,6 +209,12 @@ class MasterProcess:
                 self.__process_mapserver_state(msg)
                 self.mapserver_status_pending = False
                 send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
+            elif msg.tag == DRIFUZZ_REQ_READ_IDX:
+                res = self.global_model.get_read_idx(*msg.data)
+                send_msg(DRIFUZZ_REQ_READ_IDX, res, self.comm.to_slave_queues[msg.source])
+            elif msg.tag == DRIFUZZ_REQ_DMA_IDX:
+                res = self.global_model.get_dma_idx(*msg.data)
+                send_msg(DRIFUZZ_REQ_DMA_IDX, res, self.comm.to_slave_queues[msg.source])
             else:
                 raise Exception("Unknown msg-tag received in master process...")
 
@@ -573,6 +583,8 @@ class MasterProcess:
 
         with open(self.config.argument_values['work_dir'] + "/master.json", 'w') as outfile:
             json.dump(dump, outfile, default=json_dumper)
+        
+        self.global_model.save_data()
 
         # Save kAFL Filter
         # copyfile("/dev/shm/kafl_filter0", self.config.argument_values['work_dir'] + "/kafl_filter0")
@@ -581,6 +593,8 @@ class MasterProcess:
         """
         Method to load an entire master state from JSON file...
         """
+
+        self.global_model.load_data()
         with open(FuzzerConfiguration().argument_values['work_dir'] + "/master.json", 'r') as infile:
             dump = json.load(infile)
             for key, value in dump.items():

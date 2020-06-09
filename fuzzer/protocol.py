@@ -46,3 +46,5 @@ KAFL_INIT_BITMAP =          12 # master -> mapserver
 KAFL_TAG_REQ_SAMPLING =     13 # slave -> master       when init fuzz loop
 KAFL_TAG_REQ_BENCHMARK =    14 # slave -> master
 KAFL_TAG_ABORT_REQ =        15 # mapserver -> masater  stage abort
+DRIFUZZ_REQ_READ_IDX =      16
+DRIFUZZ_REQ_DMA_IDX =       17

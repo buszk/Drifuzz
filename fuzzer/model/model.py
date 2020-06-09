@@ -16,14 +16,11 @@ class Model(object):
 
     log_file = None
 
-    def __init__(self, id, config, req_payload_cb, submit_res_cb, reset_cb,
-                    use_model=True):
-        self.req_payload_cb = req_payload_cb
-        self.submit_res_cb = submit_res_cb
-        self.reset_cb = reset_cb
+    def __init__(self, slave,
+                    use_model=True, global_model=True):
+        self.slave = slave
         self.log_file = open('rw.log', 'w')
-        self.module_id = id 
-        self.config = config
+        self.module_id = self.slave.slave_id
         self.next_free_idx = 0
         # count data access for this run
         self.read_cnt:dict = {}
@@ -32,6 +29,7 @@ class Model(object):
         self.dma_cnt:dict = {}
         self.dma_idx:dict = {}
         self.use_model = use_model
+        self.use_global_model = global_model
 
     def __del__(self):
         self.log_file.close()
@@ -50,8 +48,7 @@ class Model(object):
         if self.payload is None:
             return 0
         if self.use_model:
-            ret = self.bytes_to_int(self.get_data_by_model(self.read_cnt, \
-                    self.read_idx, key, size))
+            ret = self.bytes_to_int(self.get_read_data_by_model(key, size))
         else:
             ret = self.bytes_to_int(self.get_data_by_size(size))
         return ret
@@ -61,7 +58,7 @@ class Model(object):
             return b'A'*size
         if self.use_model:
             k = (size)
-            ret = self.get_data_by_model(self.dma_cnt, self.dma_idx, k, size, reuse=True)
+            ret = self.get_dma_data_by_model(k, size)
         else:
             ret = self.get_data_by_size(size)
         return ret
@@ -82,32 +79,56 @@ class Model(object):
         # print(size, res)
         return res
 
-    def get_data_by_model(self, cnt_dict, idx_dict, k, size, reuse=False):
+    def get_read_data_by_model(self, k, size):
         n = 0
-        first_occur = False
-        if k not in cnt_dict.keys():
-            cnt_dict[k] = 1
+        if k not in self.read_cnt.keys():
+            self.read_cnt[k] = 1
             first_occur = True
         else:
-            n = cnt_dict[k]
-            cnt_dict[k] += 1
+            n = self.read_cnt[k]
+            self.read_cnt[k] += 1
         
-        if k in idx_dict.keys():
-            v = idx_dict[k]
-            if not first_occur and reuse:
-                idx = idx_dict[k][0]
-                ret = self.get_data_by_size(size, ind=idx)
-            elif len(v) > n:
-                idx = idx_dict[k][n]
+        if k in self.read_idx.keys():
+            v = self.read_idx[k]
+            if len(v) > n:
+                idx = self.read_idx[k][n]
                 ret = self.get_data_by_size(size, ind=idx)
             else:
-                idx_dict[k].append(self.next_free_idx)
+                self.read_idx[k].append(self.next_free_idx)
                 ret = self.get_data_by_size(size)
         else:
             idx = self.next_free_idx
-            idx_dict[k] = [self.next_free_idx]
+            self.read_idx[k] = [self.next_free_idx]
             ret = self.get_data_by_size(size)
         return ret
+    
+    def get_dma_data_by_model(self, k, size, reuse=True):
+        n = 0
+        first_occur = False
+        if k not in self.dma_cnt.keys():
+            self.dma_cnt[k] = 1
+            first_occur = True
+        else:
+            n = self.dma_cnt[k]
+            self.dma_cnt[k] += 1
+        
+        if k in self.dma_idx.keys():
+            v = self.dma_idx[k]
+            if not first_occur and reuse:
+                idx = self.dma_idx[k][0]
+                ret = self.get_data_by_size(size, ind=idx)
+            elif len(v) > n:
+                idx = self.dma_idx[k][n]
+                ret = self.get_data_by_size(size, ind=idx)
+            else:
+                self.dma_idx[k].append(self.next_free_idx)
+                ret = self.get_data_by_size(size)
+        else:
+            idx = self.next_free_idx
+            self.dma_idx[k] = [self.next_free_idx]
+            ret = self.get_data_by_size(size)
+        return ret
+    
     def handle(self, type:str, *args):
         return getattr(self, f"handle_"+type)(*args)
 
@@ -135,7 +156,7 @@ class Model(object):
         self.log = []
         self.log_file.truncate(0)
         print("requesting payload")
-        self.payload:bytearray = self.req_payload_cb()
+        self.payload:bytearray = self.slave.fetch_payload()
         print(self.payload[0:20])
         self.payload_len = len(self.payload)
         self.data_cnt = {}
@@ -146,7 +167,7 @@ class Model(object):
     def __submit_case(self, kasan=False, timeout=False):
         elapsed = time.time() - self.init_time
         print("Time spent:", elapsed)
-        self.submit_res_cb(time=elapsed, kasan=kasan, timeout=timeout, payload=self.payload)
+        self.slave.send_bitmap(time=elapsed, kasan=kasan, timeout=timeout, payload=self.payload)
 
     def handle_exec_exit(self):
         self.__submit_case()
@@ -159,17 +180,17 @@ class Model(object):
     def handle_vm_kasan(self):
         print("VM enters kasan report")
         self.__submit_case(kasan=True)
-        self.reset_cb()
+        self.slave.restart_vm()
         return (0,)
 
     def handle_req_reset(self):
         print("VM req hard reset")
-        self.reset_cb()
+        self.slave.restart_vm()
     
     def handle_exec_timeout(self):
         print("Execution timed out")
         self.__submit_case(timeout=True)
-        self.reset_cb()
+        self.slave.restart_vm()
         return (0,)
         
 
@@ -182,7 +203,7 @@ class Model(object):
             elif key == 'read_idx' or key == 'dma_idx':
                 dump[key] = [{'key': k, 'value': v} for k, v in value.items()]
 
-        with open(self.config.argument_values['work_dir'] + "/module-%d.json" % \
+        with open(self.slave.config.argument_values['work_dir'] + "/module-%d.json" % \
                     self.module_id, 'w') as outfile:
             json.dump(dump, outfile, default=json_dumper)
 
@@ -190,7 +211,7 @@ class Model(object):
         """
         Method to load an entire master state from JSON file...
         """
-        with open(self.config.argument_values['work_dir'] + "/module-%d.json" % \
+        with open(self.slave.config.argument_values['work_dir'] + "/module-%d.json" % \
                     self.module_id, 'r') as infile:
             dump = json.load(infile)
             for key, value in dump.items():

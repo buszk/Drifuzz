@@ -41,8 +41,7 @@ class SlaveThread(threading.Thread):
         self.slave_id = id
         self.config = FuzzerConfiguration()
         self.q = qemu(id, config=self.config)
-        self.model = Model(id, self.config, self.fetch_payload, self.send_bitmap,
-                self.__restart_vm)
+        self.model = Model(self)
         self.comm.register_model(self.slave_id, self.model)
         self.state = SlaveState.WAITING
         self.payload_sem = threading.BoundedSemaphore(value=1)
@@ -71,7 +70,7 @@ class SlaveThread(threading.Thread):
             return False
 
     
-    def __restart_vm(self):
+    def restart_vm(self):
         self.exit_if_reproduce()
         
         while True:
