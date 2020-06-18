@@ -233,6 +233,7 @@ class FuzzerConfiguration:
         # parser.add_argument('-ip3', required=False, metavar='<IP-Filter 3>', type=parse_range_ip_filter, help='instruction pointer filter range 3 (not supported in this version)')
         parser.add_argument('--reproduce', action=FullPaths, type=parse_is_file, 
                             help='Path to the reproduce input.')
+        parser.add_argument('--timeout', type=int, default=20)
 
         parser.add_argument('-p', required=False, metavar='<Process Number>', help='number of worker processes to start.', default=1, type=int)
         parser.add_argument('-t', required=False, metavar='<Task Number>', help='tasks per worker request to provide.', default=1, type=int)

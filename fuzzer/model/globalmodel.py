@@ -31,7 +31,7 @@ class GlobalModel():
     def get_dma_idx(self, key, size, cnt, reuse=True):
         if key in self.dma_idx.keys():
             if reuse:
-                return self.read_idx[key][0]
+                return self.dma_idx[key][0]
             elif cnt < len(self.dma_idx[key]):
                 return self.dma_idx[key][cnt]
             elif cnt == len(self.dma_idx[key]):

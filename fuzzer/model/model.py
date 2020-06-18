@@ -83,7 +83,6 @@ class Model(object):
         n = 0
         if k not in self.read_cnt.keys():
             self.read_cnt[k] = 1
-            first_occur = True
         else:
             n = self.read_cnt[k]
             self.read_cnt[k] += 1
@@ -94,39 +93,39 @@ class Model(object):
                 idx = self.read_idx[k][n]
                 ret = self.get_data_by_size(size, ind=idx)
             else:
-                self.read_idx[k].append(self.next_free_idx)
-                ret = self.get_data_by_size(size)
+                idx = self.slave.req_read_idx(k, size, n)
+                self.read_idx[k].append(idx)
+                ret = self.get_data_by_size(size, ind=idx)
         else:
-            idx = self.next_free_idx
-            self.read_idx[k] = [self.next_free_idx]
-            ret = self.get_data_by_size(size)
+            idx = self.slave.req_read_idx(k, size, n)
+            self.read_idx[k] = [idx]
+            ret = self.get_data_by_size(size, ind=idx)
         return ret
     
     def get_dma_data_by_model(self, k, size, reuse=True):
         n = 0
-        first_occur = False
         if k not in self.dma_cnt.keys():
             self.dma_cnt[k] = 1
-            first_occur = True
         else:
             n = self.dma_cnt[k]
             self.dma_cnt[k] += 1
         
         if k in self.dma_idx.keys():
             v = self.dma_idx[k]
-            if not first_occur and reuse:
+            if reuse:
                 idx = self.dma_idx[k][0]
                 ret = self.get_data_by_size(size, ind=idx)
             elif len(v) > n:
                 idx = self.dma_idx[k][n]
                 ret = self.get_data_by_size(size, ind=idx)
             else:
-                self.dma_idx[k].append(self.next_free_idx)
-                ret = self.get_data_by_size(size)
+                idx = self.slave.req_dma_idx(k, size, n)
+                self.dma_idx[k].append(idx)
+                ret = self.get_data_by_size(size, ind=idx)
         else:
-            idx = self.next_free_idx
-            self.dma_idx[k] = [self.next_free_idx]
-            ret = self.get_data_by_size(size)
+            idx = self.slave.req_dma_idx(k, size, n)
+            self.dma_idx[k] = [idx]
+            ret = self.get_data_by_size(size, ind=idx)
         return ret
     
     def handle(self, type:str, *args):
@@ -192,38 +191,3 @@ class Model(object):
         self.__submit_case(timeout=True)
         self.slave.restart_vm()
         return (0,)
-        
-
-    def save_data(self):
-        dump = {}
-        args_to_save = ['next_free_idx', 'read_idx', 'dma_idx']
-        for key, value in self.__dict__.items():
-            if key == 'next_free_idx':
-                dump[key] = value
-            elif key == 'read_idx' or key == 'dma_idx':
-                dump[key] = [{'key': k, 'value': v} for k, v in value.items()]
-
-        with open(self.slave.config.argument_values['work_dir'] + "/module-%d.json" % \
-                    self.module_id, 'w') as outfile:
-            json.dump(dump, outfile, default=json_dumper)
-
-    def load_data(self):
-        """
-        Method to load an entire master state from JSON file...
-        """
-        with open(self.slave.config.argument_values['work_dir'] + "/module-%d.json" % \
-                    self.module_id, 'r') as infile:
-            dump = json.load(infile)
-            for key, value in dump.items():
-                if key == 'next_free_idx':
-                    setattr(self, key, value)
-                elif key == 'read_idx' or key == 'dma_idx':
-                    d = {}
-                    for entry in value:
-                        if isinstance(entry['key'], list):
-                            k = tuple(entry['key'])
-                        elif isinstance(entry['key'], int):
-                            k = entry['key']
-                        d[k] = entry['value']
-                    setattr(self, key, d)
-                    

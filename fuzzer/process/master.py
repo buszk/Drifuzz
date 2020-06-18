@@ -85,10 +85,30 @@ class MasterProcess:
 
         # log_master("Use effector maps: " + str(self.use_effector_map))
 
+    def __recv_tagged_msg(self, queue, tag):
+        tmp_obj = None
+
+        while True:
+            tmp_obj = recv_msg(queue)
+            if tmp_obj.tag == tag:
+                return tmp_obj
+            elif tmp_obj.tag == DRIFUZZ_REQ_READ_IDX:
+                # print(tmp_obj.data)
+                res = self.global_model.get_read_idx(*tmp_obj.data)
+                # print("returned")
+                send_msg(DRIFUZZ_REQ_READ_IDX, res, self.comm.to_slave_queues[tmp_obj.source])
+            elif tmp_obj.tag == DRIFUZZ_REQ_DMA_IDX:
+                # print(tmp_obj.data)
+                res = self.global_model.get_dma_idx(*tmp_obj.data)
+                # print("returned")
+                send_msg(DRIFUZZ_REQ_DMA_IDX, res, self.comm.to_slave_queues[tmp_obj.source])
+            else:
+                queue.put(tmp_obj)
+
     def __start_processes(self):
         for i in range(self.comm.num_processes):
             start_time = time.time()
-            recv_tagged_msg(self.comm.to_master_queue, KAFL_TAG_START)
+            self.__recv_tagged_msg(self.comm.to_master_queue, KAFL_TAG_START)
             self.kafl_state.slaves_ready += 1
             if (time.time() - start_time) >= 0.1:
                 send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
@@ -211,9 +231,11 @@ class MasterProcess:
                 send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
             elif msg.tag == DRIFUZZ_REQ_READ_IDX:
                 res = self.global_model.get_read_idx(*msg.data)
+                print("Sending read index")
                 send_msg(DRIFUZZ_REQ_READ_IDX, res, self.comm.to_slave_queues[msg.source])
             elif msg.tag == DRIFUZZ_REQ_DMA_IDX:
                 res = self.global_model.get_dma_idx(*msg.data)
+                print("Sending dma index")
                 send_msg(DRIFUZZ_REQ_DMA_IDX, res, self.comm.to_slave_queues[msg.source])
             else:
                 raise Exception("Unknown msg-tag received in master process...")
@@ -259,7 +281,7 @@ class MasterProcess:
     def __request_bitmap(self, payload):
         print('req bitmap')
         send_msg(KAFL_TAG_REQ_BITMAP, payload, self.comm.to_slave_queues[0])
-        msg = recv_tagged_msg(self.comm.to_master_from_slave_queue, KAFL_TAG_REQ_BITMAP)
+        msg = self.__recv_tagged_msg(self.comm.to_master_queue, KAFL_TAG_REQ_BITMAP)
         return msg.data
 
     def __commission_effector_map(self, bitmap):
@@ -277,7 +299,7 @@ class MasterProcess:
         log_master("Initial benchmark...")
         start_run = time.time()
         send_msg(KAFL_TAG_REQ_BENCHMARK, [payload, runs], self.comm.to_slave_queues[0])
-        recv_tagged_msg(self.comm.to_master_from_slave_queue, KAFL_TAG_REQ_BENCHMARK)
+        self.__recv_tagged_msg(self.comm.to_master_queue, KAFL_TAG_REQ_BENCHMARK)
 
         multiplier = int(5 / (time.time()-start_run))
         if multiplier == 0:
@@ -290,7 +312,7 @@ class MasterProcess:
             send_msg(KAFL_TAG_REQ_BENCHMARK, [payload, multiplier*runs], slave)
             c += 1
         for i in range(c):
-            recv_tagged_msg(self.comm.to_master_from_slave_queue, KAFL_TAG_REQ_BENCHMARK)
+            self.__recv_tagged_msg(self.comm.to_master_queue, KAFL_TAG_REQ_BENCHMARK)
             self.round_counter += multiplier*runs
 
         value = self.__stop_benchmark()
@@ -312,7 +334,7 @@ class MasterProcess:
             if c == max_slaves:
                 break
         for i in range(c):
-            msg = recv_tagged_msg(self.comm.to_master_from_slave_queue, KAFL_TAG_REQ_SAMPLING)
+            msg = self.__recv_tagged_msg(self.comm.to_master_queue, KAFL_TAG_REQ_SAMPLING)
         return msg.data
 
     def __start_benchmark(self, counter_offset):
@@ -571,6 +593,23 @@ class MasterProcess:
                         send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
 
             payload, finished_state = self.__perform_post_sync(finished)
+
+    def reproduce_loop(self):
+        self.__recv_tagged_msg(self.comm.to_master_queue, KAFL_TAG_START)
+        send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
+        # while True:        
+        while True:
+            msg = recv_msg(self.comm.to_master_queue)
+            if msg.tag == DRIFUZZ_REQ_READ_IDX:
+                res = self.global_model.get_read_idx(*msg.data)
+                print("Sending read index")
+                send_msg(DRIFUZZ_REQ_READ_IDX, res, self.comm.to_slave_queues[msg.source])
+            elif msg.tag == DRIFUZZ_REQ_DMA_IDX:
+                res = self.global_model.get_dma_idx(*msg.data)
+                print("Sending dma index")
+                send_msg(DRIFUZZ_REQ_DMA_IDX, res, self.comm.to_slave_queues[msg.source])
+            else:
+                continue
 
     def save_data(self):
         """

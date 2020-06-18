@@ -8,7 +8,7 @@ import multiprocessing
 from enum import IntEnum
 from .qemu import qemu
 from communicator import Communicator
-from communicator import send_msg, recv_msg
+from communicator import send_msg, recv_msg, recv_tagged_msg
 from model.model import Model
 from protocol import *
 from common.config import FuzzerConfiguration
@@ -46,15 +46,14 @@ class SlaveThread(threading.Thread):
         self.state = SlaveState.WAITING
         self.payload_sem = threading.BoundedSemaphore(value=1)
         self.payload_sem.acquire()
+        self.idx_sem = threading.BoundedSemaphore(value=1)
+        self.idx_sem.acquire()
         self._stop_event = threading.Event()
         self.bitmap_size = self.config.config_values['BITMAP_SHM_SIZE']
         self.bitmap_filename = '/dev/shm/drifuzz_bitmap_' + str(self.slave_id)
         self.comm.slave_locks_bitmap[self.slave_id].acquire()
     
         self.reproduce = self.config.argument_values['reproduce']
-
-        if reload:
-            self.model.load_data()
         
 
     def __del__(self):
@@ -65,13 +64,15 @@ class SlaveThread(threading.Thread):
     def exit_if_reproduce(self):
         if self.reproduce and self.reproduce != "":
             print("Reproducing case. Stop here")
-            self.q.__del__()
+            self.stop()
             os.kill(os.getpid(), signal.SIGINT)
-            return False
+            return True
+        return False
 
     
     def restart_vm(self):
-        self.exit_if_reproduce()
+        if self.reproduce and self.reproduce != "":
+            return False
         
         while True:
             self.q.__del__()
@@ -145,14 +146,15 @@ class SlaveThread(threading.Thread):
         print('bitmap covers %d bytes; global bitmap covers %d bytes' % (result, global_cnt))
 
     def send_bitmap(self, time = 10, kasan = False, timeout = False, payload = None):
-        self.exit_if_reproduce()
+        if self.exit_if_reproduce():
+            return
 
         if self.state == SlaveState.PROC_BITMAP:
             bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
             bitmap_shm.seek(0)
             bitmap = bitmap_shm.read(self.bitmap_size)
             # Reply master's BITMAP cmd
-            send_msg(KAFL_TAG_REQ_BITMAP, bitmap, self.comm.to_master_from_slave_queue, source = self.slave_id)
+            send_msg(KAFL_TAG_REQ_BITMAP, bitmap, self.comm.to_master_queue, source = self.slave_id)
             # Ask master for new payloads once
             #   Transit from PROC_BITMAP to regular fuzzing
             # if not self.requested_input:
@@ -203,12 +205,40 @@ class SlaveThread(threading.Thread):
         # print(len(payload))
         assert(self.state != SlaveState.WAITING)
         return payload
+
+    def req_read_idx(self, key, size, cnt):
+        send_msg(DRIFUZZ_REQ_READ_IDX, (key, size, cnt), \
+            self.comm.to_master_queue,  source=self.slave_id)
+        # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
+        # print("requesting")
+        if self.idx_sem.acquire(timeout=5):
+            # print("requested")
+            return self.idx
+        else:
+            print('Req read index: timeout')
+            print(key, " ", size, " ", cnt)
+            # self.stop()
+            return 0
+    
+    def req_dma_idx(self, key, size, cnt):
+        send_msg(DRIFUZZ_REQ_DMA_IDX, (key, size, cnt), \
+            self.comm.to_master_queue,  source=self.slave_id)
+        # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
+        # print("requesting")
+        if self.idx_sem.acquire(timeout=5):
+            # print("requested")
+            return self.idx
+        else:
+            print('Req dma index: timeout')
+            # self.stop()
+            return 0
+        
     
     def interprocess_proto_handler(self):
         response = recv_msg(self.comm.to_slave_queues[self.slave_id], timeout=0.1)
         if response is None:
             return
-        print('slave got cmd %d' % response.tag)
+        # print('slave got cmd %d' % response.tag)
 
         if response.tag == KAFL_TAG_JOB:
             self.__respond_job_req(response)
@@ -221,6 +251,11 @@ class SlaveThread(threading.Thread):
 
         elif response.tag == KAFL_TAG_REQ_BENCHMARK:
             self.__respond_benchmark_req(response)  
+
+        elif response.tag == DRIFUZZ_REQ_READ_IDX or \
+             response.tag == DRIFUZZ_REQ_DMA_IDX:
+            self.idx = response.data
+            self.idx_sem.release()
 
         else:
             log_slave("Received TAG: " + str(response.tag), self.slave_id)
@@ -243,8 +278,7 @@ class SlaveThread(threading.Thread):
             self.interprocess_proto_handler()
             #except:
             #    return
-        if not self.reproduce or self.reproduce == "":
-            self.model.save_data()
+            
 
     def run(self):
         self.loop()

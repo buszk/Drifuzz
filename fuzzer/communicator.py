@@ -179,7 +179,6 @@ class Communicator:
     def stop(self):
         for sock in self.socks:
             sock.stop()
-            sock.join()
 
 
 class Message():

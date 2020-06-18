@@ -105,7 +105,8 @@ class qemu:
                     "-machine", "kernel-irqchip=off",
                     "-device", "drifuzz,bitmap=" + self.bitmap_filename + \
                         ",bitmap_size=" + str(self.bitmap_size) + \
-                        ",socket=" + self.socket_path]
+                        ",socket=" + self.socket_path + \
+                        ",timeout=" + str(self.config.argument_values['timeout'])]
         # self.cmd = ["gdb", "-ex", "handle SIGUSR1 nostop noprint", "-ex", "r", "--args"] +\
         #         self.cmd
         self.kafl_shm_f = None
@@ -237,7 +238,7 @@ class qemu:
         # When multiple processes are forked close in time,
         # Popen possibly hangs
         time.sleep(1)
-        # return
+        
         if verbose:
         # if True:
             self.process = subprocess.Popen(self.cmd,
