@@ -180,6 +180,15 @@ static notrace unsigned long canonicalize_ip(unsigned long ip)
 	return ip;
 }
 
+static inline uint64_t mix_bits(uint64_t v) {
+    v ^= (v >> 31);
+    v *= 0x7fb5d329728ea185;
+    v ^= (v >> 27);
+    v *= 0x81dadef4bc2dd44d;
+    v ^= (v >> 33);
+    return v;
+}
+
 /*
  * Entry point from instrumented code.
  * This is called once per basic-block/edge.
@@ -191,6 +200,7 @@ void notrace __sanitizer_cov_trace_pc(void)
 	unsigned long ip = canonicalize_ip(_RET_IP_);
 	unsigned long pos;
 	unsigned int size;
+	unsigned long addr;
 	t = current;
 	/* Drifuzz */
 	if (!_kcov_area) 
@@ -203,11 +213,21 @@ void notrace __sanitizer_cov_trace_pc(void)
 	// area = t->kcov_area;
 	// kcov_size = t->kcov_size;
 	/* The first 64-bit word is the number of subsequent PCs. */
-	pos = READ_ONCE(area[0]) + 1;
-	if (likely(pos < size)) {
-		area[pos] = ip;
-		WRITE_ONCE(area[0], pos);
-	}
+	// pos = READ_ONCE(area[0]) + 1;
+	// if (likely(pos < size)) {
+	// 	area[pos] = ip;
+	// 	WRITE_ONCE(area[0], pos);
+	// }
+	addr = mix_bits(ip) % size;
+#ifdef EDGE_COV
+	addr = (addr ^ (t->kcov_last >> 1)) % size;
+#endif
+
+	if (likely(area[addr] != 0))
+		area[addr] --;
+	
+	t->kcov_last = ip;
+	
 }
 EXPORT_SYMBOL(__sanitizer_cov_trace_pc);
 

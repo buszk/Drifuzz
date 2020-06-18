@@ -15,10 +15,12 @@
 #define KCOV_INIT_TRACE _IOR('c', 1, unsigned long)
 #define KCOV_ENABLE _IO('c', 100)
 #define KCOV_DISABLE _IO('c', 101)
-#define BITMAP_SIZE 65536
+#define COVER_SIZE (64 << 10)
 
 #define KCOV_TRACE_PC 0
 #define KCOV_TRACE_CMP 1
+
+#define BITMAP_SIZE 65536
 
 void exec_init() {
   int fd;
@@ -31,14 +33,6 @@ void exec_init() {
 void exec_exit() {
   int fd;
   uint64_t act = 6;
-  fd = open("/dev/drifuzz", O_WRONLY);
-  write(fd, &act, sizeof(act));
-  close(fd);
-}
-
-void exec_timeout() {
-  int fd;
-  uint64_t act = 11;
   fd = open("/dev/drifuzz", O_WRONLY);
   write(fd, &act, sizeof(act));
   close(fd);
@@ -80,26 +74,27 @@ int main(int argc, char **argv) {
     perror("mmap"), exit(1);
 
   system("[ -e /dev/drifuzz ] || mknod /dev/drifuzz c 248 0");
-  system("sysctl kernel.unknown_nmi_panic=1");
-  system("ls /lib/firmware");
 
   for (int i = 0; i < 1000; i++) {
-    int stat;
-    int timeout=0;
     if (ioctl(fd, KCOV_ENABLE, KCOV_TRACE_PC))
       perror("ioctl"), exit(1);
-    memset(cover, 0xff, BITMAP_SIZE);
+    // __atomic_store_n(&cover[0], 0, __ATOMIC_RELAXED);
+    memset(cover, 255, BITMAP_SIZE);
     exec_init();
-    system("modprobe ath10k_pci");
-    system("sleep 0.5");
-    system("rmmod ath10k_pci");
+    system("modprobe alx");
+    system("ip link set dev enp0s3 up");
+    sleep(4);
+    system("ip link set dev enp0s3 down");
+    system("rmmod alx");
     if (ioctl(fd, KCOV_DISABLE, 0))
       perror("ioctl"), exit(1);
+    // n = __atomic_load_n(&cover[0], __ATOMIC_RELAXED);
+    // printf("%ld traces detected first: %lx\n", n, __atomic_load_n(&cover[1], __ATOMIC_RELAXED));
     exec_exit();
   }
 
   /* Free resources. */
-  if (munmap(cover, BITMAP_SIZE))
+  if (munmap(cover, COVER_SIZE * sizeof(unsigned long)))
     perror("munmap"), exit(1);
   if (close(fd))
     perror("close"), exit(1);

@@ -20,6 +20,8 @@
 #define KCOV_TRACE_PC 0
 #define KCOV_TRACE_CMP 1
 
+#define BITMAP_SIZE 65536
+
 void exec_init() {
   int fd;
   uint64_t act = 5;
@@ -63,10 +65,10 @@ int main(int argc, char **argv) {
   if (fd == -1)
     perror("open"), exit(1);
   /* Setup trace mode and trace size. */
-  if (ioctl(fd, KCOV_INIT_TRACE, COVER_SIZE))
+  if (ioctl(fd, KCOV_INIT_TRACE, BITMAP_SIZE/sizeof(unsigned long)))
     perror("ioctl"), exit(1);
   /* Mmap buffer shared between kernel- and user-space. */
-  cover = (unsigned long *)mmap(NULL, COVER_SIZE * sizeof(unsigned long),
+  cover = (unsigned long *)mmap(NULL, BITMAP_SIZE,
                                 PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
   if ((void *)cover == MAP_FAILED)
     perror("mmap"), exit(1);
@@ -76,17 +78,15 @@ int main(int argc, char **argv) {
   for (int i = 0; i < 1000; i++) {
     if (ioctl(fd, KCOV_ENABLE, KCOV_TRACE_PC))
       perror("ioctl"), exit(1);
-    __atomic_store_n(&cover[0], 0, __ATOMIC_RELAXED);
+    memset(cover, 255, BITMAP_SIZE);
     exec_init();
     system("modprobe alx");
     system("ip link set dev enp0s3 up");
-    sleep(2);
+    sleep(4);
     system("ip link set dev enp0s3 down");
     system("rmmod alx");
     if (ioctl(fd, KCOV_DISABLE, 0))
       perror("ioctl"), exit(1);
-    n = __atomic_load_n(&cover[0], __ATOMIC_RELAXED);
-    printf("%ld traces detected first: %lx\n", n, __atomic_load_n(&cover[1], __ATOMIC_RELAXED));
     exec_exit();
   }
 
