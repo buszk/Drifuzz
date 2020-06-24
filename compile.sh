@@ -70,7 +70,7 @@ if [ ! -d linux-module-build ]; then
 rm -rf linux-module-build
 mkdir linux-module-build
 (cd linux && make O=../linux-module-build allnoconfig)
-cp .config.mod linux-module-build
+cp .config linux-module-build
 fi
 make -C linux-module-build -j4
 popd
