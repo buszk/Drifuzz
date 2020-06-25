@@ -85,6 +85,9 @@ fi
 
 # build image
 if [ "$BUILD_IMAGE" = 1 ]; then
+if ! [ -d image/chroot ]; then
+(cd image && ./build-image.sh)
+fi
 pushd $PWD
 sudo make INSTALL_MOD_PATH=$PWD/image/chroot -C linux-module-build -j4 modules_install
 if [ "$TARGET" != "" ]; then
