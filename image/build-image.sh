@@ -34,9 +34,11 @@ else
 if [ -f driver ]; then
     sudo cp driver chroot/root
     echo '#!/bin/bash' | sudo tee chroot/etc/rc.local
+    echo 'sysctl kernel.unknown_nmi_panic=1' | sudo tee -a chroot/etc/rc.local
     echo '/root/driver' | sudo tee -a chroot/etc/rc.local
 else
-    echo '' | sudo tee chroot/etc/rc.local
+    echo '#!/bin/bash' | sudo tee chroot/etc/rc.local
+    echo 'sysctl kernel.unknown_nmi_panic=1' | sudo tee -a chroot/etc/rc.local
 fi
 
 sudo dd if=/dev/zero of=$RELEASE.img bs=1M seek=$SEEK count=1
