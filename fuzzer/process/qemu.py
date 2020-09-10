@@ -29,6 +29,7 @@ import time
 from socket import error as socket_error
 import psutil
 import mmh3
+from os.path import dirname
 
 # from common.debug import log_qemu
 # from common.util import atomic_write
@@ -62,9 +63,9 @@ class qemu:
         self.control = None
         self.control_fileno = None
 
-        self.payload_filename   = "/dev/shm/kafl_qemu_payload_" + self.qemu_id
-        self.binary_filename    = "/dev/shm/kafl_qemu_binary_"  + self.qemu_id
-        self.argv_filename      = "/dev/shm/kafl_argv_"         + self.qemu_id
+        self.payload_filename   = "/dev/shm/drifuzz_payload_" + self.qemu_id
+        # self.binary_filename    = "/dev/shm/kafl_qemu_binary_"  + self.qemu_id
+        # self.argv_filename      = "/dev/shm/kafl_argv_"         + self.qemu_id
         self.bitmap_filename    = "/dev/shm/drifuzz_bitmap_"       + self.qemu_id
         self.socket_path        = "/tmp/drifuzz_socket_"        + self.qemu_id
         # if self.config.argument_values.has_key('work_dir'):
@@ -90,10 +91,11 @@ class qemu:
         #             "-device drifuzz,bitmap=" + self.bitmap_filename + \
         #                 ",bitmap_size=" + str(self.bitmap_size) + \
         #                 ",socket=" + self.socket_path + " " \
+        drifuzz_path = dirname(dirname(dirname(os.path.realpath(__file__))))
         target = self.config.argument_values['target']
-        self.cmd = ["/home/buszk/Workspace/git/Drifuzz/qemu-build/x86_64-softmmu/qemu-system-x86_64",
-                    "-hda", "/home/buszk/Workspace/git/Drifuzz/image/buster.img",
-                    "-kernel", "/home/buszk/Workspace/git/Drifuzz/linux-module-build/arch/x86_64/boot/bzImage",
+        self.cmd = [f"{drifuzz_path}/qemu-build/x86_64-softmmu/qemu-system-x86_64",
+                    "-hda", f"{drifuzz_path}/image/buster.img",
+                    "-kernel", f"{drifuzz_path}/linux-module-build/arch/x86_64/boot/bzImage",
                     "-append", "console=ttyS0 nokaslr root=/dev/sda earlyprintk=serial",
                     "-snapshot",
                     "-enable-kvm",
