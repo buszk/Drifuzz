@@ -69,11 +69,16 @@ class Model(object):
         else:
             ii = self.next_free_idx % self.payload_len
         res = b''
-        while ii + size >self.payload_len:
+        # while ii + size >self.payload_len:
+        #     res += self.payload[ii:self.payload_len]
+        #     size -= (self.payload_len - ii)
+        #     ii = 0
+        # res += self.payload[ii:ii+size]
+        if ii + size >self.payload_len:
             res += self.payload[ii:self.payload_len]
-            size -= (self.payload_len - ii)
-            ii = 0
-        res += self.payload[ii:ii+size]
+            res += b'\x00' * (ii + size - self.payload_len)
+        else:
+            res += self.payload[ii:ii+size]
         if not ind:
             self.next_free_idx += size
         # print(size, res)
