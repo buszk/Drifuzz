@@ -69,8 +69,10 @@ static inline depot_stack_handle_t save_stack(gfp_t flags)
 	unsigned long entries[KASAN_STACK_DEPTH];
 	unsigned int nr_entries;
 
-	nr_entries = stack_trace_save(entries, ARRAY_SIZE(entries), 0);
-	nr_entries = filter_irq_stacks(entries, nr_entries);
+	//nr_entries = stack_trace_save(entries, ARRAY_SIZE(entries), 0);
+	//nr_entries = filter_irq_stacks(entries, nr_entries);
+	nr_entries = 1;
+	entries[0] = -1;
 	return stack_depot_save(entries, nr_entries, flags);
 }
 
