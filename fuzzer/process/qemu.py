@@ -93,7 +93,7 @@ class qemu:
         #                 ",socket=" + self.socket_path + " " \
         drifuzz_path = dirname(dirname(dirname(os.path.realpath(__file__))))
         target = self.config.argument_values['target']
-        self.cmd = [f"{drifuzz_path}/qemu-build/x86_64-softmmu/qemu-system-x86_64",
+        self.cmd = [f"{drifuzz_path}/panda-build/x86_64-softmmu/panda-system-x86_64",
                     "-hda", f"{drifuzz_path}/image/buster.img",
                     "-kernel", f"{drifuzz_path}/linux-module-build/arch/x86_64/boot/bzImage",
                     "-append", "console=ttyS0 nokaslr root=/dev/sda earlyprintk=serial",

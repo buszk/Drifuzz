@@ -141,10 +141,11 @@ class Model(object):
         self.log_file.write("[%.4f] write #%d[%lx][%d] =  %x\n" % (time.time(), region, addr, size, val))
 
     def handle_read(self, region, addr, size):
+        ind = self.next_free_idx
         k = (region, addr, size)
         ret = self.get_read_data(k, size)
         self.log_file.write("[%.4f] read  #%d[%lx][%d] as %x\n" % (time.time(), region, addr, size, ret))
-        return (ret,)
+        return (ret, ind,)
     
     def handle_dma_buf(self, size):
         ret = self.get_dma_data(size)

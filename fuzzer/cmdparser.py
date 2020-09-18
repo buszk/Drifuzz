@@ -23,7 +23,7 @@ opts = {
         'func': 'read',
         'argbytes': 24,
         'argfmt': '<QQQ',
-        'retfmt': '<Q'
+        'retfmt': '<QQ'
     },
     Command.DMA_BUF: {
         'func': 'dma_buf',
