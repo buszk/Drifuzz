@@ -63,72 +63,73 @@ done
 
 # compile panda
 if [ "$BUILD_PANDA" = 1 ]; then
-if [ -z "$LLVM_INSTALL" ] || [ ! -d "$LLVM_INSTALL" ]; then
-echo "Please specify LLVM install directory; skipping without"
-else
-pushd $PWD
-if [ ! -d panda-build ] || [ "$REBUILD_PANDA" = 1 ]; then
-rm -rf panda-build
-mkdir panda-build
-( cd panda-build &&
-../panda/configure \
-    --target-list=x86_64-softmmu \
-    --cc=gcc --cxx=g++ \
-    --enable-llvm --with-llvm="$LLVM_INSTALL" \
-    --extra-cxxflags=-Wno-error=class-memaccess \
-    --disable-werror \
-    --python=python3
-)
-fi
-make -C panda-build -j$NP
-popd
-fi
+    pushd $PWD
+    if [ ! -d panda-build ] || [ "$REBUILD_PANDA" = 1 ]; then
+        if [ -z "$LLVM_INSTALL" ] || [ ! -d "$LLVM_INSTALL" ]; then
+            echo "Please specify LLVM install directory"
+            exit 1
+        else
+            rm -rf panda-build
+            mkdir panda-build
+            ( cd panda-build &&
+            ../panda/configure \
+                --target-list=x86_64-softmmu \
+                --cc=gcc --cxx=g++ \
+                --enable-llvm --with-llvm="$LLVM_INSTALL" \
+                --extra-cxxflags=-Wno-error=class-memaccess \
+                --disable-werror \
+                --python=python3
+            )
+        fi
+    fi
+    [ -f panda-build/Makefile ] && make -C panda-build -j$NP
+    popd
 fi
 
 # compile qemu
 if [ "$BUILD_QEMU" = 1 ]; then
-pushd $PWD
-if [ ! -d qemu-build ] || [ "$REBUILD_QEMU" = 1 ]; then
-rm -rf qemu-build
-mkdir qemu-build
-( cd qemu-build && ../qemu/configure --target-list=x86_64-softmmu --enable-debug --cc=gcc )
-fi
-make -C qemu-build -j$NP
-popd
+    pushd $PWD
+    if [ ! -d qemu-build ] || [ "$REBUILD_QEMU" = 1 ]; then
+        rm -rf qemu-build
+        mkdir qemu-build
+        ( cd qemu-build && ../qemu/configure --target-list=x86_64-softmmu --enable-debug --cc=gcc )
+    fi
+    make -C qemu-build -j$NP
+    popd
 fi
 
 # compile modular linux kernel
 if [ "$BUILD_LINUX" = 1 ]; then
-pushd $PWD
-if [ ! -d linux-module-build ]; then
-rm -rf linux-module-build
-mkdir linux-module-build
-(cd linux && make O=../linux-module-build allnoconfig)
-cp .config linux-module-build
-fi
-make -C linux-module-build -j$NP
-popd
+    pushd $PWD
+    if [ ! -d linux-module-build ]; then
+        rm -rf linux-module-build
+        mkdir linux-module-build
+        (cd linux && make O=../linux-module-build allnoconfig)
+        cp .config linux-module-build
+    fi
+    make -C linux-module-build -j$NP
+    popd
 fi
 
 # compile linux modules
 if [ "$BUILD_MODULE" = 1 ]; then
-pushd $PWD
-make -C linux-module-build -j$NP modules
-popd
+    pushd $PWD
+    make -C linux-module-build -j$NP modules
+    popd
 fi
 
 # build image
 if [ "$BUILD_IMAGE" = 1 ]; then
-if ! [ -d image/chroot ]; then
-(cd image && ./build-image.sh)
-fi
-pushd $PWD
-sudo make INSTALL_MOD_PATH=$PWD/image/chroot -C linux-module-build -j4 modules_install
-if [ "$TARGET" != "" ]; then
-(cd image && make clean && make driver-$TARGET && ./build-image.sh)
-else
-(cd image && make clean && ./build-image.sh)
-fi
-popd
+    if ! [ -d image/chroot ]; then
+        (cd image && ./build-image.sh)
+    fi
+    pushd $PWD
+    sudo make INSTALL_MOD_PATH=$PWD/image/chroot -C linux-module-build -j4 modules_install
+    if [ "$TARGET" != "" ]; then
+        (cd image && make clean && make driver-$TARGET && ./build-image.sh)
+    else
+        (cd image && make clean && ./build-image.sh)
+    fi
+    popd
 fi
 
