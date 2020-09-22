@@ -185,7 +185,7 @@ class Model(object):
     def handle_vm_kasan(self):
         print("VM enters kasan report")
         self.__submit_case(kasan=True)
-        self.slave.restart_vm()
+        # self.slave.restart_vm()
         return (0,)
 
     def handle_req_reset(self):
