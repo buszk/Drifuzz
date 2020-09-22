@@ -11,7 +11,6 @@ BUILD_IMAGE=0
 REBUILD_PANDA=0
 REBUILD_QEMU=0
 REBUILD_LINUX=0
-TARGET=
 NP=4
 
 while :; do
@@ -46,10 +45,6 @@ while :; do
         ;;
         --rebuild-linux)
             REBUILD_LINUX=1
-        ;;
-        --target)
-            shift
-            TARGET=$1
         ;;
         -j)
             shift
@@ -125,11 +120,7 @@ if [ "$BUILD_IMAGE" = 1 ]; then
     fi
     pushd $PWD
     sudo make INSTALL_MOD_PATH=$PWD/image/chroot -C linux-module-build -j4 modules_install
-    if [ "$TARGET" != "" ]; then
-        (cd image && make clean && make driver-$TARGET && ./build-image.sh)
-    else
-        (cd image && make clean && ./build-image.sh)
-    fi
+    (cd image && make clean && make && ./build-image.sh)
     popd
 fi
 

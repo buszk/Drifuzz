@@ -1,10 +1,8 @@
 
-all:
-	gcc -o driver driver.c
+all: driver-main
 
 %:%.c
-	gcc -o $@ $<
-	mv $@ driver
+	gcc -g -o $@ $<
 
 clean:
-	rm -f driver
+	rm -f driver-main

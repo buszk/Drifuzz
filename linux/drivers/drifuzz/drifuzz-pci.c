@@ -21,6 +21,8 @@ static int major_num;
 #define CMD_ARG3 0x20
 #define ACT 0x1
 
+#define INFO_START 0x40
+
 /* shared */
 enum ACTIONS {
 	CONST_DMA_INIT = 1,
@@ -213,6 +215,7 @@ static int handle_command(void* buffer, size_t len) {
 static ssize_t device_write(struct file *flip, const char *buffer, size_t len,
 		loff_t *offset) {
 	//uint64_t *p = (uint64_t*) buffer;
+	*offset = 0;
 	int num = 0;
 	void *kbuf = kmalloc(len, GFP_KERNEL);
 	if (copy_from_user(kbuf, buffer, len)) {
@@ -227,8 +230,18 @@ static ssize_t device_write(struct file *flip, const char *buffer, size_t len,
 
 static ssize_t device_read(struct file *flip, char *buffer, size_t len, 
 		loff_t *offset) {
-	printk(KERN_ALERT "This operation is not supported.\n");
-	return -EINVAL;
+	size_t off;
+	void *kbuf = kmalloc(len, GFP_KERNEL);
+	if (!adapter)
+		return -EINVAL;
+	for (off = 0; off < len; off++) {
+		*(char*)(kbuf + off) = readb(adapter->hw_addr + INFO_START + *offset + off);
+	}
+	if (copy_to_user(buffer, kbuf, len)) {
+		return -EIO;
+	}
+	*offset += len;
+	return len;
 }
 
 static int device_open(struct inode *inode, struct file *file) {

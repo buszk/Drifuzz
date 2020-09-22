@@ -96,7 +96,7 @@ class qemu:
         self.cmd = [f"{drifuzz_path}/panda-build/x86_64-softmmu/panda-system-x86_64",
                     "-hda", f"{drifuzz_path}/image/buster.img",
                     "-kernel", f"{drifuzz_path}/linux-module-build/arch/x86_64/boot/bzImage",
-                    "-append", "console=ttyS0 nokaslr root=/dev/sda earlyprintk=serial",
+                    "-append", "console=ttyS0 nokaslr root=/dev/sda earlyprintk=serial net.ifnames=0 modprobe.blacklist=%s" % target,
                     "-snapshot",
                     "-enable-kvm",
                     "-k", "de",
@@ -108,7 +108,9 @@ class qemu:
                     "-device", "drifuzz,bitmap=" + self.bitmap_filename + \
                         ",bitmap_size=" + str(self.bitmap_size) + \
                         ",socket=" + self.socket_path + \
-                        ",timeout=" + str(self.config.argument_values['timeout'])]
+                        ",timeout=" + str(self.config.argument_values['timeout']) + \
+                        ",target=%s" % target + \
+                        ",prog=init"]
         # self.cmd = ["gdb", "-ex", "handle SIGUSR1 nostop noprint", "-ex", "r", "--args"] +\
         #         self.cmd
         self.kafl_shm_f = None
