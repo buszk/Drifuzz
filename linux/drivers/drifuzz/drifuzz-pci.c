@@ -272,9 +272,6 @@ static struct file_operations file_ops = {
 static int qemu_probe(struct pci_dev *pdev, const struct pci_device_id *ent) {
 	printk(KERN_INFO "Qemu probe\n Hello!\n");
 	int err;
-	dma_addr_t dma_handle;
-	void *const_dma_region;
-	void *stream_dma_region;
 	// int bars;
 	//bars = pci_select_bars(pdev, IORESOURCE_MEM | IORESOURCE_IO);
 	if ((err = pci_enable_device(pdev)))
@@ -292,7 +289,11 @@ static int qemu_probe(struct pci_dev *pdev, const struct pci_device_id *ent) {
 	adapter->hw_addr = pci_ioremap_bar(pdev, 0);
 	pci_set_drvdata(pdev, adapter);
 
-
+	// Test code for dma
+	/*
+	dma_addr_t dma_handle;
+	void *const_dma_region;
+	void *stream_dma_region;
 	const_dma_region =
 			dma_alloc_coherent(&pdev->dev, 0x1000, &dma_handle, GFP_KERNEL);
 
@@ -314,6 +315,7 @@ static int qemu_probe(struct pci_dev *pdev, const struct pci_device_id *ent) {
 	// udelay(100);
 	printk(KERN_INFO "stream dma data: %s\n", (char*)stream_dma_region);
 	kfree(stream_dma_region);
+	*/
 	return 0;
 }
 
