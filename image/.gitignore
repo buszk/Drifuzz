@@ -1,3 +1,4 @@
 chroot
 *.img
-driver
+*.qcow2
+driver-main
