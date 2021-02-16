@@ -800,6 +800,7 @@ static void ath_pci_read_cachesize(struct ath_common *common, int *csz)
 static bool ath_pci_eeprom_read(struct ath_common *common, u32 off, u16 *data)
 {
 	struct ath_hw *ah = (struct ath_hw *) common->ah;
+	printk(KERN_INFO "ath_pci_eeprom_read offset: %lx\n", off);
 
 	common->ops->read(ah, AR5416_EEPROM_OFFSET + (off << AR5416_EEPROM_S));
 

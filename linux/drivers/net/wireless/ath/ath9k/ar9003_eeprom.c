@@ -3029,6 +3029,7 @@ static bool ar9300_eeprom_read_word(struct ath_hw *ah, int address,
 				    u8 *buffer)
 {
 	u16 val;
+	printk(KERN_INFO "ar9300_eeprom_read_word address: %lx\n", address);
 
 	if (unlikely(!ath9k_hw_nvram_read(ah, address / 2, &val)))
 		return false;
@@ -3062,6 +3063,7 @@ static bool ar9300_read_eeprom(struct ath_hw *ah, int address, u8 *buffer,
 		count--;
 	}
 
+	printk(KERN_INFO "ar9300_read_eeprom address: %lx count: %lx\n", address, count);
 	for (i = 0; i < count / 2; i++) {
 		if (!ar9300_eeprom_read_word(ah, address, buffer))
 			goto error;
@@ -3350,8 +3352,12 @@ found:
 		ath_dbg(common, EEPROM,
 			"Found block at %x: code=%d ref=%d length=%d major=%d minor=%d\n",
 			cptr, code, reference, length, major, minor);
+		printk(KERN_INFO
+			"Found block at %x: code=%d ref=%d length=%d major=%d minor=%d\n",
+			cptr, code, reference, length, major, minor);
 		if ((!AR_SREV_9485(ah) && length >= 1024) ||
-		    (AR_SREV_9485(ah) && length > EEPROM_DATA_LEN_9485)) {
+		    (AR_SREV_9485(ah) && length > EEPROM_DATA_LEN_9485)||
+			(length > cptr)) {
 			ath_dbg(common, EEPROM, "Skipping bad header\n");
 			cptr -= COMP_HDR_LEN;
 			continue;

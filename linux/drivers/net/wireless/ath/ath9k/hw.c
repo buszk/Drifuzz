@@ -357,6 +357,7 @@ static bool ath9k_hw_chip_test(struct ath_hw *ah)
 		regAddr[1] = AR_PHY_BASE + (8 << 2);
 	} else
 		loop_max = 1;
+	return true;
 
 	for (i = 0; i < loop_max; i++) {
 		u32 addr = regAddr[i];
@@ -574,6 +575,7 @@ static int __ath9k_hw_init(struct ath_hw *ah)
 		ath_err(common, "Could not read hardware revisions");
 		return -EOPNOTSUPP;
 	}
+    printk(KERN_INFO "macVersion: %x", ah->hw_version.macVersion);
 
 	switch (ah->hw_version.macVersion) {
 	case AR_SREV_VERSION_5416_PCI:

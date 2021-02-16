@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: ISC
+KCOV_INSTRUMENT := y
+ccflags-y += -fno-reorder-functions
 ath9k-y +=	beacon.o \
 		gpio.o \
 		init.o \
