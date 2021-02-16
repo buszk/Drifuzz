@@ -2106,6 +2106,7 @@ int ath10k_pci_hif_exchange_bmi_msg(struct ath10k *ar,
 				    void *req, u32 req_len,
 				    void *resp, u32 *resp_len)
 {
+	printk(KERN_INFO "[ath10k_pci_hif_exchange_bmi_msg]\n");
 	struct ath10k_pci *ar_pci = ath10k_pci_priv(ar);
 	struct ath10k_pci_pipe *pci_tx = &ar_pci->pipe_info[BMI_CE_NUM_TO_TARG];
 	struct ath10k_pci_pipe *pci_rx = &ar_pci->pipe_info[BMI_CE_NUM_TO_HOST];
@@ -2119,12 +2120,15 @@ int ath10k_pci_hif_exchange_bmi_msg(struct ath10k *ar,
 
 	might_sleep();
 
+	printk(KERN_INFO "resp && !resp_len\n");
 	if (resp && !resp_len)
 		return -EINVAL;
 
+	printk(KERN_INFO "resp && resp_len && *resp_len == 0\n");
 	if (resp && resp_len && *resp_len == 0)
 		return -EINVAL;
 
+	printk(KERN_INFO "treq\n");
 	treq = kmemdup(req, req_len, GFP_KERNEL);
 	if (!treq)
 		return -ENOMEM;
@@ -2137,6 +2141,7 @@ int ath10k_pci_hif_exchange_bmi_msg(struct ath10k *ar,
 	}
 
 	if (resp && resp_len) {
+		printk(KERN_INFO "resp && resp_len == true\n");
 		tresp = kzalloc(*resp_len, GFP_KERNEL);
 		if (!tresp) {
 			ret = -ENOMEM;
@@ -2154,19 +2159,23 @@ int ath10k_pci_hif_exchange_bmi_msg(struct ath10k *ar,
 		xfer.wait_for_resp = true;
 		xfer.resp_len = 0;
 
+		printk(KERN_INFO "ath10k_ce_rx_post_buf\n");
 		ath10k_ce_rx_post_buf(ce_rx, &xfer, resp_paddr);
 	}
 
+	printk(KERN_INFO "ath10k_ce_send\n");
 	ret = ath10k_ce_send(ce_tx, &xfer, req_paddr, req_len, -1, 0);
 	if (ret)
 		goto err_resp;
 
+	printk(KERN_INFO "ath10k_pci_bmi_wait\n");
 	ret = ath10k_pci_bmi_wait(ar, ce_tx, ce_rx, &xfer);
 	if (ret) {
 		dma_addr_t unused_buffer;
 		unsigned int unused_nbytes;
 		unsigned int unused_id;
 
+		printk(KERN_INFO "ath10k_ce_cancel_send_next\n");
 		ath10k_ce_cancel_send_next(ce_tx, NULL, &unused_buffer,
 					   &unused_nbytes, &unused_id);
 	} else {
@@ -2177,7 +2186,8 @@ int ath10k_pci_hif_exchange_bmi_msg(struct ath10k *ar,
 err_resp:
 	if (resp) {
 		dma_addr_t unused_buffer;
-
+		
+		printk(KERN_INFO "ath10k_ce_revoke_recv_next\n");
 		ath10k_ce_revoke_recv_next(ce_rx, NULL, &unused_buffer);
 		dma_unmap_single(ar->dev, resp_paddr,
 				 *resp_len, DMA_FROM_DEVICE);
@@ -2188,6 +2198,7 @@ err_req:
 	if (ret == 0 && resp_len) {
 		*resp_len = min(*resp_len, xfer.resp_len);
 		// memcpy(resp, tresp, xfer.resp_len);
+		printk(KERN_INFO "VULNERABILITY MEMCPY\n");
 		memcpy(resp, tresp, *resp_len);
 	}
 err_dma:

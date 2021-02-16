@@ -805,7 +805,9 @@ static const struct firmware *ath10k_fetch_fw_file(struct ath10k *ar,
 		dir = ".";
 
 	snprintf(filename, sizeof(filename), "%s/%s", dir, file);
-	ret = firmware_request_nowarn(&fw, filename, ar->dev);
+	//ret = firmware_request_nowarn(&fw, filename, ar->dev);
+    ret = request_firmware(&fw, filename, ar->dev);
+
 	ath10k_dbg(ar, ATH10K_DBG_BOOT, "boot fw request '%s': %d\n",
 		   filename, ret);
 
@@ -873,12 +875,12 @@ static int ath10k_core_get_board_id_from_otp(struct ath10k *ar)
 
 	if (!ar->normal_mode_fw.fw_file.otp_data ||
 	    !ar->normal_mode_fw.fw_file.otp_len) {
-		ath10k_warn(ar,
+        printk(KERN_INFO
 			    "failed to retrieve board id because of invalid otp\n");
 		return -ENODATA;
 	}
 
-	ath10k_dbg(ar, ATH10K_DBG_BOOT,
+    printk(KERN_INFO
 		   "boot upload otp to 0x%x len %zd for board id\n",
 		   address, ar->normal_mode_fw.fw_file.otp_len);
 
@@ -886,7 +888,8 @@ static int ath10k_core_get_board_id_from_otp(struct ath10k *ar)
 				       ar->normal_mode_fw.fw_file.otp_data,
 				       ar->normal_mode_fw.fw_file.otp_len);
 	if (ret) {
-		ath10k_err(ar, "could not write otp for board id check: %d\n",
+        printk(KERN_INFO
+		"could not write otp for board id check: %d\n",
 			   ret);
 		return ret;
 	}
@@ -899,7 +902,8 @@ static int ath10k_core_get_board_id_from_otp(struct ath10k *ar)
 
 	ret = ath10k_bmi_execute(ar, address, bmi_board_id_param, &result);
 	if (ret) {
-		ath10k_err(ar, "could not execute otp for board id check: %d\n",
+        printk(KERN_INFO
+		"could not execute otp for board id check: %d\n",
 			   ret);
 		return ret;
 	}
@@ -908,7 +912,7 @@ static int ath10k_core_get_board_id_from_otp(struct ath10k *ar)
 	chip_id = MS(result, ATH10K_BMI_CHIP_ID_FROM_OTP);
 	ext_bid_support = (result & ATH10K_BMI_EXT_BOARD_ID_SUPPORT);
 
-	ath10k_dbg(ar, ATH10K_DBG_BOOT,
+    printk(KERN_INFO
 		   "boot get otp board id result 0x%08x board_id %d chip_id %d ext_bid_support %d\n",
 		   result, board_id, chip_id, ext_bid_support);
 
@@ -916,7 +920,7 @@ static int ath10k_core_get_board_id_from_otp(struct ath10k *ar)
 
 	if ((result & ATH10K_BMI_BOARD_ID_STATUS_MASK) != 0 ||
 	    (board_id == 0)) {
-		ath10k_dbg(ar, ATH10K_DBG_BOOT,
+        printk(KERN_INFO
 			   "board id does not exist in otp, ignore it\n");
 		return -EOPNOTSUPP;
 	}
@@ -2954,36 +2958,47 @@ static int ath10k_core_probe_fw(struct ath10k *ar)
 
 	if (!test_bit(ATH10K_FW_FEATURE_NON_BMI,
 		      ar->normal_mode_fw.fw_file.fw_features)) {
+        printk(KERN_INFO "ath10k_core_pre_cal_download\n");
 		ret = ath10k_core_pre_cal_download(ar);
 		if (ret) {
+            printk(KERN_INFO "ath10k_core_pre_cal_download ret %d\n", ret);
 			/* pre calibration data download is not necessary
 			 * for all the chipsets. Ignore failures and continue.
 			 */
 			ath10k_dbg(ar, ATH10K_DBG_BOOT,
 				   "could not load pre cal data: %d\n", ret);
 		}
-
+        printk(KERN_INFO "ath10k_core_pre_cal_download succeed\n");
+        
+        printk(KERN_INFO "before get_board_id_from_otp\n");
 		ret = ath10k_core_get_board_id_from_otp(ar);
 		if (ret && ret != -EOPNOTSUPP) {
+            printk(KERN_INFO "fail get_board_id_from_otp\n");
 			ath10k_err(ar, "failed to get board id from otp: %d\n",
 				   ret);
 			goto err_free_firmware_files;
 		}
+        printk(KERN_INFO "after get_board_id_from_otp\n");
 
+        printk(KERN_INFO "check_smbios\n");
 		ret = ath10k_core_check_smbios(ar);
 		if (ret)
 			ath10k_dbg(ar, ATH10K_DBG_BOOT, "SMBIOS bdf variant name not set.\n");
 
+        printk(KERN_INFO "check_dt\n");
 		ret = ath10k_core_check_dt(ar);
 		if (ret)
 			ath10k_dbg(ar, ATH10K_DBG_BOOT, "DT bdf variant name not set.\n");
 
+        printk(KERN_INFO "fetch_board_file\n");
 		ret = ath10k_core_fetch_board_file(ar, ATH10K_BD_IE_BOARD);
 		if (ret) {
+            printk(KERN_INFO "fetch_board_file err\n");
 			ath10k_err(ar, "failed to fetch board file: %d\n", ret);
 			goto err_free_firmware_files;
 		}
 
+        printk(KERN_INFO "print_board_info\n");
 		ath10k_debug_print_board_info(ar);
 	}
 

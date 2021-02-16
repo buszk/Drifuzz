@@ -1,6 +1,6 @@
 # SPDX-License-Identifier: ISC
 KCOV_INSTRUMENT := y
-ccflags-y += -fno-omit-frame-pointer
+ccflags-y += -fno-reorder-functions
 obj-$(CONFIG_ATH10K) += ath10k_core.o
 ath10k_core-y += mac.o \
 		 debug.o \

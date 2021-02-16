@@ -1094,6 +1094,7 @@ static int _ath10k_ce_completed_send_next_nolock(struct ath10k_ce_pipe *ce_state
 	unsigned int sw_index = src_ring->sw_index;
 	unsigned int read_index;
 	struct ce_desc *desc;
+	printk(KERN_INFO "[_ath10k_ce_completed_send_next_nolock]\n");
 
 	if (src_ring->hw_index == sw_index) {
 		/*
@@ -1120,9 +1121,15 @@ static int _ath10k_ce_completed_send_next_nolock(struct ath10k_ce_pipe *ce_state
 	if (read_index == sw_index)
 		return -EIO;
 
-	if (per_transfer_contextp)
+	if (per_transfer_contextp) {
 		*per_transfer_contextp =
 			src_ring->per_transfer_context[sw_index];
+		printk(KERN_INFO "Setting per_transfer_contextp\n");
+
+	}
+	else {
+		printk(KERN_INFO "NOT Setting per_transfer_contextp\n");
+	}
 
 	/* sanity */
 	src_ring->per_transfer_context[sw_index] = NULL;

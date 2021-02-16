@@ -449,7 +449,7 @@ int ath10k_bmi_lz_stream_start(struct ath10k *ar, u32 address)
 
 	ret = ath10k_hif_exchange_bmi_msg(ar, &cmd, cmdlen, NULL, NULL);
 	if (ret) {
-		ath10k_warn(ar, "unable to Start LZ Stream to the device\n");
+		printk(KERN_INFO "unable to Start LZ Stream to the device\n");
 		return ret;
 	}
 
@@ -463,6 +463,9 @@ int ath10k_bmi_fast_download(struct ath10k *ar,
 	u32 head_len = rounddown(length, 4);
 	u32 trailer_len = length - head_len;
 	int ret;
+    printk(KERN_INFO
+		   "bmi fast download address 0x%x buffer 0x%pK length %d\n",
+		   address, buffer, length);
 
 	ath10k_dbg(ar, ATH10K_DBG_BMI,
 		   "bmi fast download address 0x%x buffer 0x%pK length %d\n",
@@ -471,6 +474,7 @@ int ath10k_bmi_fast_download(struct ath10k *ar,
 	ret = ath10k_bmi_lz_stream_start(ar, address);
 	if (ret)
 		return ret;
+    printk(KERN_INFO "lz_stream_start\n");
 
 	/* copy the last word into a zero padded buffer */
 	if (trailer_len > 0)
@@ -483,12 +487,14 @@ int ath10k_bmi_fast_download(struct ath10k *ar,
 
 	if (ret)
 		return ret;
+    printk(KERN_INFO "lz_data buf\n");
 
 	if (trailer_len > 0)
 		ret = ath10k_bmi_lz_data(ar, trailer, 4);
 
 	if (ret != 0)
 		return ret;
+    printk(KERN_INFO "lz_data trail\n");
 
 	/*
 	 * Close compressed stream and open a new (fake) one.
