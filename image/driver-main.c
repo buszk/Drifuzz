@@ -110,6 +110,7 @@ int main(int argc, char **argv) {
     
     /* For tracing via qemu nmi cmd */
     system("sysctl kernel.unknown_nmi_panic=1");
+    system("echo '1' > /sys/module/rcupdate/parameters/rcu_cpu_stall_suppress");
 
     if (ioctl(fd, KCOV_ENABLE, KCOV_TRACE_PC))
         perror("ioctl"), exit(1);
