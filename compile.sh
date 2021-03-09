@@ -11,7 +11,7 @@ BUILD_IMAGE=0
 REBUILD_PANDA=0
 REBUILD_QEMU=0
 REBUILD_LINUX=0
-NP=4
+NP=12
 
 while :; do
     case $1 in
