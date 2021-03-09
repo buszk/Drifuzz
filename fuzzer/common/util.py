@@ -43,12 +43,7 @@ def atomic_write(filename, data):
 def read_binary_file(filename):
     payload = b""
     f = open(filename, 'rb')
-    while True:
-        buf = f.read(1024)
-        if len(buf) == 0:
-            break
-        payload += buf
-
+    payload = f.read()
     f.close()
     return payload
 
