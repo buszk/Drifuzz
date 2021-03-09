@@ -35,6 +35,7 @@ sudo cp driver-main chroot/root
 sudo cp prog-*.sh chroot/root
 echo '#!/bin/bash' | sudo tee chroot/etc/rc.local
 echo '/root/driver-main' | sudo tee -a chroot/etc/rc.local
+sudo chmod +x chroot/etc/rc.local
 
 sudo dd if=/dev/zero of=$RELEASE.img bs=1M seek=$SEEK count=1
 sudo mkfs.ext4 -F $RELEASE.img
