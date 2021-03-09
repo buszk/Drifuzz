@@ -1613,10 +1613,13 @@ struct net_device *init_atmel_card(unsigned short irq, unsigned long port,
 	return dev;
 
 err_out_res:
+	printk(KERN_INFO "err_out_res");
 	release_region(dev->base_addr, 32);
 err_out_irq:
+	printk(KERN_INFO "err_out_irq");
 	free_irq(dev->irq, dev);
 err_out_free:
+	printk(KERN_INFO "err_out_free");
 	free_netdev(dev);
 	return NULL;
 }

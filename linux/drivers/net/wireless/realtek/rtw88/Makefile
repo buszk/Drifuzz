@@ -1,5 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0 OR BSD-3-Clause
 
+KCOV_INSTRUMENT := y
+ccflags-y += -fno-reorder-functions
 obj-$(CONFIG_RTW88_CORE)	+= rtw88.o
 rtw88-y += main.o \
 	   mac80211.o \

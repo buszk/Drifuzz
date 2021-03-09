@@ -50,11 +50,13 @@ static int atmel_pci_probe(struct pci_dev *pdev,
 			      ATMEL_FW_TYPE_506,
 			      &pdev->dev, NULL, NULL);
 	if (!dev) {
+		printk(KERN_INFO "[atmel_pci_probe] init_atmel_card failed\n");
 		pci_disable_device(pdev);
 		return -ENODEV;
 	}
 
 	pci_set_drvdata(pdev, dev);
+	printk(KERN_INFO "[atmel_pci_probe] succeed\n");
 	return 0;
 }
 

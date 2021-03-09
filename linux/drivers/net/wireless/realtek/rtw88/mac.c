@@ -325,10 +325,15 @@ static bool check_firmware_size(const u8 *data, u32 size)
 	emem_size = (fw_hdr->mem_usage & BIT(4)) ?
 		    le32_to_cpu(fw_hdr->emem_size) : 0;
 
+	printk(KERN_INFO "dmem_size: %x, imem_size: %x, emem_size: %x\n",
+			dmem_size, imem_size, emem_size);
+
 	dmem_size += FW_HDR_CHKSUM_SIZE;
 	imem_size += FW_HDR_CHKSUM_SIZE;
 	emem_size += emem_size ? FW_HDR_CHKSUM_SIZE : 0;
 	real_size = FW_HDR_SIZE + dmem_size + imem_size + emem_size;
+
+	printk(KERN_INFO "real_size: %x, size: %x\n", real_size, size);
 	if (real_size != size)
 		return false;
 

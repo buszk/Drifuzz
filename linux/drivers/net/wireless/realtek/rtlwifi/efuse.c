@@ -270,6 +270,7 @@ void read_efuse(struct ieee80211_hw *hw, u16 _offset, u16 _size_byte, u8 *pbuf)
 		}
 
 		if (offset < efuse_max_section) {
+			offset &= (efuse_max_section -1);
 			RTPRINT(rtlpriv, FEEPROM, EFUSE_READ_ALL,
 				"offset-%d Worden=%x\n", offset, wren);
 

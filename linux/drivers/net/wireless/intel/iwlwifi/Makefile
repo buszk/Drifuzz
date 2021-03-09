@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0
+KCOV_INSTRUMENT := y
+ccflags-y += -fno-reorder-functions
 # common
 obj-$(CONFIG_IWLWIFI)	+= iwlwifi.o
 iwlwifi-objs		+= iwl-io.o

@@ -1196,14 +1196,17 @@ found:
 		iwl_trans_release_nic_access(iwl_trans, &flags);
 	}
 
+	printk(KERN_INFO "iwl drv\n");
+
 	pci_set_drvdata(pdev, iwl_trans);
 	iwl_trans->drv = iwl_drv_start(iwl_trans);
 
 	if (IS_ERR(iwl_trans->drv)) {
+		printk(KERN_INFO "PTR_ERR: iwl_trans->drv\n");
 		ret = PTR_ERR(iwl_trans->drv);
 		goto out_free_trans;
 	}
-
+	printk(KERN_INFO "PTR_OK: iwl_trans->drv\n");
 	/* register transport layer debugfs here */
 	iwl_trans_pcie_dbgfs_register(iwl_trans);
 
@@ -1243,6 +1246,7 @@ static int iwl_pci_suspend(struct device *device)
 
 static int iwl_pci_resume(struct device *device)
 {
+	printk(KERN_INFO "[iwl_pci_resume]");
 	struct pci_dev *pdev = to_pci_dev(device);
 	struct iwl_trans *trans = pci_get_drvdata(pdev);
 	struct iwl_trans_pcie *trans_pcie = IWL_TRANS_GET_PCIE_TRANS(trans);

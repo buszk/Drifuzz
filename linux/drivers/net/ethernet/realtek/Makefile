@@ -2,6 +2,8 @@
 #
 # Makefile for the Realtek network device drivers.
 #
+KCOV_INSTRUMENT := y
+ccflags-y += -fno-reorder-functions
 
 obj-$(CONFIG_8139CP) += 8139cp.o
 obj-$(CONFIG_8139TOO) += 8139too.o

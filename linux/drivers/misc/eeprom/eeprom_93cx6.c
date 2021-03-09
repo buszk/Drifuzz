@@ -151,8 +151,7 @@ static void eeprom_93cx6_read_bits(struct eeprom_93cx6 *eeprom,
 		/*
 		 * Read if the bit has been set.
 		 */
-		if (eeprom->reg_data_out)
-			buf |= (1 << (i - 1));
+		buf |= ((eeprom->reg_data_out != 0) << (i - 1));
 
 		eeprom_93cx6_pulse_low(eeprom);
 	}

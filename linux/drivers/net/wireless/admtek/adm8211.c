@@ -458,6 +458,7 @@ static void adm8211_interrupt_rci(struct ieee80211_hw *dev)
 
 static irqreturn_t adm8211_interrupt(int irq, void *dev_id)
 {
+	printk(KERN_INFO "[adm8211_interrupt]\n");
 #define ADM8211_INT(x)						\
 do {								\
 	if (unlikely(stsr & ADM8211_STSR_ ## x))		\
@@ -1393,6 +1394,7 @@ static void adm8211_configure_filter(struct ieee80211_hw *dev,
 static int adm8211_add_interface(struct ieee80211_hw *dev,
 				 struct ieee80211_vif *vif)
 {
+	printk(KERN_INFO "[adm8211_add_interface]\n");
 	struct adm8211_priv *priv = dev->priv;
 	if (priv->mode != NL80211_IFTYPE_MONITOR)
 		return -EOPNOTSUPP;
@@ -1402,6 +1404,7 @@ static int adm8211_add_interface(struct ieee80211_hw *dev,
 		priv->mode = vif->type;
 		break;
 	default:
+		WARN_ON(1);
 		return -EOPNOTSUPP;
 	}
 
@@ -1520,12 +1523,14 @@ static int adm8211_start(struct ieee80211_hw *dev)
 	retval = adm8211_hw_reset(dev);
 	if (retval) {
 		wiphy_err(dev->wiphy, "hardware reset failed\n");
+		printk(KERN_INFO "hardware reset failed\n");
 		goto fail;
 	}
 
 	retval = adm8211_init_rings(dev);
 	if (retval) {
 		wiphy_err(dev->wiphy, "failed to initialize rings\n");
+		printk(KERN_INFO "failed to initialize rings\n");
 		goto fail;
 	}
 

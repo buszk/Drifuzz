@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0
+KCOV_INSTRUMENT := y
+ccflags-y += -fno-reorder-functions
 obj-$(CONFIG_RTLWIFI) 		+= rtlwifi.o
 rtlwifi-objs	:=		\
 		base.o		\
