@@ -105,6 +105,7 @@ class Model(object):
             idx = self.slave.req_read_idx(k, size, n)
             self.read_idx[k] = [idx]
             ret = self.get_data_by_size(size, ind=idx)
+        self.log_file.write("[%.4f] idx %x n %d :%d %d %d\n" % (time.time(), idx, n, k[0], k[1], k[2]))
         return ret
     
     def get_dma_data_by_model(self, k, size, reuse=True):
@@ -159,7 +160,6 @@ class Model(object):
     def handle_exec_init(self):
         self.init_time = time.time()
         self.log = []
-        self.log_file.truncate(0)
         print("requesting payload")
         self.payload:bytearray = self.slave.fetch_payload()
         print(self.payload[0:20])
