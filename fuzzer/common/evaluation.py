@@ -30,10 +30,7 @@ class Evaluation:
 				last = ""
 				with open(self.config.argument_values['work_dir'] + "/evaluation/data.csv", "rb") as f:
 					first = f.readline()
-					f.seek(-2, 2)
-					while f.read(1) != b"\n":
-						f.seek(-2, 1)
-					last = f.readline()
+					last = f.readlines()[-1]
 				self.time_offset = float(last.split(b";")[0])
 				log_eval("[EVAL]\tTime offset for evaluation file is " + str(self.time_offset))
 				self.performance_file = open(self.config.argument_values['work_dir'] + "/evaluation/data.csv", "a")
