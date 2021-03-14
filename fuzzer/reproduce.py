@@ -43,6 +43,7 @@ def main():
 
     comm = Communicator(num_processes = num_processes)
     master = MasterProcess(comm, reload=False)
+    master.load_data()
     slave = SlaveThread(comm, 0, reload=True)
     
     comm.start()
