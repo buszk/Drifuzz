@@ -66,7 +66,7 @@ def mutate_seq_walking_bits_array(data, func, skip_null=False, kafl_state=None, 
             func(None, no_data=True)
             continue
         data[i//8] ^= (0x80 >> (i % 8))
-        func(data.tostring(), affected_bytes=[(i//8)])
+        func(data.tobytes(), affected_bytes=[(i//8)])
         data[i//8] ^= (0x80 >> (i % 8))
 
 def mutate_seq_two_walking_bits_array(data, func, skip_null=False, kafl_state=None, effector_map=None):
@@ -84,7 +84,7 @@ def mutate_seq_two_walking_bits_array(data, func, skip_null=False, kafl_state=No
             func(None, no_data=True)
             continue
         data[i//7] ^= (0xC0 >> (i % 7))
-        func(data.tostring(), affected_bytes=[(i//7)])
+        func(data.tobytes(), affected_bytes=[(i//7)])
         data[i//7] ^= (0xC0 >> (i % 7))
 
 def mutate_seq_four_walking_bits_array(data, func, skip_null=False, kafl_state=None, effector_map=None):
@@ -102,7 +102,7 @@ def mutate_seq_four_walking_bits_array(data, func, skip_null=False, kafl_state=N
             func(None, no_data=True)
             continue
         data[i//5] ^= (0xF0 >> (i % 5))
-        func(data.tostring(), affected_bytes=[(i//5)])
+        func(data.tobytes(), affected_bytes=[(i//5)])
         data[i//5] ^= (0xF0 >> (i % 5))
 
 def mutate_seq_walking_byte_array(data, func, skip_null=False, kafl_state=None, effector_map=None):
@@ -134,7 +134,7 @@ def mutate_seq_two_walking_bytes_array(data, func, kafl_state=None, effector_map
                 if not effector_map[i] or not effector_map[i-1]:
                     continue
             data[i] ^= 0xFF
-            func(data.tostring(), affected_bytes=[i-1, i])
+            func(data.tobytes(), affected_bytes=[i-1, i])
             data[i-1] ^= 0xFF
         data[len(data)-1] ^= 0xFF
 
