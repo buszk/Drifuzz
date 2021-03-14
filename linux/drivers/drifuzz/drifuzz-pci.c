@@ -20,6 +20,7 @@ static int major_num;
 #define CMD_ARG2 0x18
 #define CMD_ARG3 0x20
 #define ACT 0x1
+#define READY_ADDR 0x30
 
 #define INFO_START 0x40
 
@@ -97,8 +98,13 @@ EXPORT_SYMBOL(handle_stream_dma_exit);
 
 static void handle_exec_init(void) {
     if (adapter) {
+		writeq(0, adapter->hw_addr + READY_ADDR);
         writeq(EXEC_INIT, adapter->hw_addr + CMD_ADDR);
 		writeq(ACT, adapter->hw_addr);
+		uint64_t res = 0;
+		do {
+			res = readq(adapter->hw_addr + READY_ADDR);
+		} while(res == 0);
     }
 }
 static void handle_exec_exit(void) {
