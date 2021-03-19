@@ -69,6 +69,7 @@ class SocketThread (threading.Thread):
                             connection.send(_ret)
                         elif ret != None and isinstance(ret[0], bytes):
                             connection.send(ret[0])
+                            connection.send(struct.pack('<Q', ret[1]))
 
                     except socket.timeout:
                         pass

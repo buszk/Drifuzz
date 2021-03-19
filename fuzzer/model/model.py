@@ -151,7 +151,9 @@ class Model(object):
     def handle_dma_buf(self, size):
         ret = self.get_dma_data(size)
         self.log_file.write("[%.4f] dma_buf [%x]\n" % (time.time(), size))
-        return (ret,)
+        # Pass an empty index 0 here
+        # No need to care during fuzzing
+        return (ret, 0)
 
     def handle_reset(self):
         # TODO Check coverage
