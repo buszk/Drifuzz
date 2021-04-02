@@ -221,12 +221,15 @@ class SlaveThread(threading.Thread):
             return 0
     
     def req_dma_idx(self, key, size, cnt):
+        print('req_dma_idx: send_msg')
         send_msg(DRIFUZZ_REQ_DMA_IDX, (key, size, cnt), \
             self.comm.to_master_queue,  source=self.slave_id)
         # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
         # print("requesting")
+        print('req_dma_idx: acquire')
         if self.idx_sem.acquire(timeout=5):
             # print("requested")
+            print('req_dma_idx: acquired')
             return self.idx
         else:
             print('Req dma index: timeout')
@@ -262,14 +265,14 @@ class SlaveThread(threading.Thread):
 
 
     def loop(self):
-        print('starting qemu')
+        # print('starting qemu')
         # self.comm.reload_semaphore.acquire()
         v = False
         if self.reproduce and self.reproduce != "":
             v = True
         self.q.start(verbose=v)
         # self.comm.reload_semaphore.release()
-        print('started qemu')
+        # print('started qemu')
         send_msg(KAFL_TAG_REQ, self.q.qemu_id, self.comm.to_master_queue, source=self.slave_id)
         while not self.stopped():
             #try:

@@ -237,14 +237,13 @@ class qemu:
         self.tick_timeout_treshold = treshold
 
     def start(self, verbose=False):
-        print(self.cmd)
+        # print(self.cmd)
         # This is to prevent subprocess Popen glitch.
         # When multiple processes are forked close in time,
         # Popen possibly hangs
         time.sleep(1)
         
         if verbose:
-        # if True:
             self.process = subprocess.Popen(self.cmd,
                                             stdin=None,
                                             stdout=None,

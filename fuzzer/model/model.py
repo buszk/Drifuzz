@@ -64,25 +64,35 @@ class Model(object):
         return ret
     
     def get_data_by_size(self, size, ind = None):
-        if ind:
-            ii = ind % self.payload_len
-        else:
-            ii = self.next_free_idx % self.payload_len
         res = b''
-        # while ii + size >self.payload_len:
-        #     res += self.payload[ii:self.payload_len]
-        #     size -= (self.payload_len - ii)
-        #     ii = 0
-        # res += self.payload[ii:ii+size]
-        if ii + size >self.payload_len:
-            res += self.payload[ii:self.payload_len]
-            res += b'\x00' * (ii + size - self.payload_len)
+        if ind >= self.payload_len:
+            res = b'\xaa' * size
+        elif ind + size > self.payload_len:
+            res += self.payload[ind:self.payload_len]
+            res += b'\xaa' * (ind + size - self.payload_len)
         else:
-            res += self.payload[ii:ii+size]
-        if not ind:
-            self.next_free_idx += size
-        # print(size, res)
+            res += self.payload[ind:ind+size]
         return res
+
+        # if ind:
+        #     ii = ind % self.payload_len
+        # else:
+        #     ii = self.next_free_idx % self.payload_len
+        # res = b''
+        # # while ii + size >self.payload_len:
+        # #     res += self.payload[ii:self.payload_len]
+        # #     size -= (self.payload_len - ii)
+        # #     ii = 0
+        # # res += self.payload[ii:ii+size]
+        # if ii + size >self.payload_len:
+        #     res += self.payload[ii:self.payload_len]
+        #     res += b'\xaa' * (ii + size - self.payload_len)
+        # else:
+        #     res += self.payload[ii:ii+size]
+        # if not ind:
+        #     self.next_free_idx += size
+        # # print(size, res)
+        # return res
 
     def get_read_data_by_model(self, k, size):
         n = 0
