@@ -264,13 +264,15 @@ class MasterProcess:
 
     def __task_send(self, tasks, qid, dest):
         print('task send')
+        print(f"{len(tasks)=}")
+        print(f"{len(tasks[0])=}")
         fs_shm = self.comm.get_master_payload_shm(int(qid))
         size = self.comm.get_master_payload_shm_size()
-        for i in range(len(tasks)):
-            fs_shm.seek(size * i)
-            # input_len = to_string_32(len(tasks[i]))
-            fs_shm.write(struct.pack('<I', len(tasks[i])))
-            fs_shm.write(tasks[i])
+        fs_shm.seek(0)
+        assert len(tasks) > 0
+        # input_len = to_string_32(len(tasks[i]))
+        fs_shm.write(struct.pack('<I', len(tasks[0])))
+        fs_shm.write(tasks[0])
         if self.byte_map:
             data = self.byte_map
         else:

@@ -10,8 +10,7 @@ from cmdparser import opts, Command
 
 
 
-# qemu_socket_prefix = '/dev/drifuzz_socket_'
-qemu_socket_prefix = '/tmp/drifuzz_socket_'
+qemu_socket_prefix = '/tmp/zekun_drifuzz_socket_'
 bitmap_size = 65536
 
 class SocketThread (threading.Thread):
