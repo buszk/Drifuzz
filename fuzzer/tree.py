@@ -718,7 +718,7 @@ class KaflTree:
             ratio_bits = 0.0
         #log_tree("ratio_coverage: " + str(ratio_coverage))
         #log_tree("ratio_bits: " + str(ratio_bits))
-        return ratio_coverage, ratio_bits
+        return ratio_coverage, ratio_bits, count_bytes
 
 
     def draw(self):

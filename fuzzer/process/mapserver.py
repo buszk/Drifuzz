@@ -243,7 +243,7 @@ class MapserverProcess:
             self.ring_buffers[slave_id].clear()
 
     def __update_state(self):
-        self.mapserver_state_obj.ratio_coverage, self.mapserver_state_obj.ratio_bits = self.treemap.get_bitmap_values()
+        self.mapserver_state_obj.ratio_coverage, self.mapserver_state_obj.ratio_bits, self.mapserver_state_obj.byte_covered = self.treemap.get_bitmap_values()
         self.mapserver_state_obj.cycles = self.treemap.cycles
         self.mapserver_state_obj.hashes = self.treemap.paths
         self.mapserver_state_obj.path_pending = self.treemap.paths - self.treemap.paths_finished - self.treemap.paths_in_progress

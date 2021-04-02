@@ -39,6 +39,7 @@ class MapserverState:
 
         self.ratio_coverage = 0.0
         self.ratio_bits = 0.0
+        self.byte_covered = 0
 
         self.path_pending = 0
         self.path_unfinished = 0
@@ -111,6 +112,7 @@ class State:
 
         self.ratio_coverage = 0.0
         self.ratio_bits = 0.0
+        self.byte_covered = 0
 
         self.path_pending = 0
         self.path_unfinished = 0

@@ -29,7 +29,7 @@ from technique.bitflip import *
 from technique.havoc import *
 from technique.interesting_values import *
 from technique.debug import *
-# from tree import KaflNodeType
+from tree import KaflNodeType
 from common.util import get_seed_files, check_state_exists, json_dumper
 from common.util import read_binary_file
 from common.config import FuzzerConfiguration
@@ -187,6 +187,7 @@ class MasterProcess:
         self.kafl_state.favorites = map_state.favorites
         self.kafl_state.ratio_coverage = map_state.ratio_coverage
         self.kafl_state.ratio_bits = map_state.ratio_bits
+        self.kafl_state.byte_covered = map_state.byte_covered
 
         self.kafl_state.path_pending = map_state.path_pending
         self.kafl_state.path_unfinished = map_state.path_unfinished
