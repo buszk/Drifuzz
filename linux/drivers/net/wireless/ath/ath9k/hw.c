@@ -357,7 +357,6 @@ static bool ath9k_hw_chip_test(struct ath_hw *ah)
 		regAddr[1] = AR_PHY_BASE + (8 << 2);
 	} else
 		loop_max = 1;
-	return true;
 
 	for (i = 0; i < loop_max; i++) {
 		u32 addr = regAddr[i];
