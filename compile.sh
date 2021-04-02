@@ -59,6 +59,7 @@ done
 # compile panda
 if [ "$BUILD_PANDA" = 1 ]; then
     pushd $PWD
+    panda/drifuzz/scripts/generate_filter_pc.py linux-module-build/vmlinux
     if [ ! -d panda-build ] || [ "$REBUILD_PANDA" = 1 ]; then
         if [ -z "$LLVM_INSTALL" ] || [ ! -d "$LLVM_INSTALL" ]; then
             echo "Please specify LLVM install directory"
