@@ -58,7 +58,7 @@ def mutate_seq_8_bit_arithmetic_array(data, func, skip_null=False, kafl_state=No
             was = data[i/set_arith_max]
             data[i/set_arith_max] = ((data[i/set_arith_max] + (i % set_arith_max)) & 0xff)
             if (i%set_arith_max) != 0:
-                func(data.tostring())
+                func(data.tobytes())
             else:
                 func(None, no_data=True)
                 func(None, no_data=True)
@@ -69,7 +69,7 @@ def mutate_seq_8_bit_arithmetic_array(data, func, skip_null=False, kafl_state=No
 
         if is_not_bitflip(data[i/set_arith_max] ^ (data[i/set_arith_max] - ((i) % set_arith_max))):
             data[i/set_arith_max] = ((data[i/set_arith_max] - (i % set_arith_max)) & 0xff)
-            func(data.tostring())
+            func(data.tobytes())
             data[i/set_arith_max] = ((data[i/set_arith_max] + (i % set_arith_max)) & 0xff)
         else:
             func(None, no_data=True)

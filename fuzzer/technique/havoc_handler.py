@@ -11,14 +11,14 @@ def havoc_perform_bit_flip(data, func):
     if len(data) >= 1:
         bit = RAND(len(data) << 3)
         data[bit/8] ^= 1 << (bit % 8)
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
 def havoc_perform_insert_interesting_value_8(data, func):
     if len(data) >= 1:
         data[RAND(len(data))] = interesting_8_Bit[RAND(len(interesting_8_Bit))]
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
@@ -29,7 +29,7 @@ def havoc_perform_insert_interesting_value_16(data, func):
         if RAND(2) == 1:
             interesting_value = swap_16(interesting_value)
         store_16(data, pos, interesting_value)
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
@@ -40,7 +40,7 @@ def havoc_perform_insert_interesting_value_32(data, func):
         if RAND(2) == 1:
             interesting_value = swap_32(interesting_value)
         store_32(data, pos, interesting_value)
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
@@ -50,7 +50,7 @@ def havoc_perform_byte_subtraction_8(data, func):
         value = load_8(data, pos)
         value -= 1 + RAND(AFL_ARITH_MAX)
         store_8(data, pos, value)
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
@@ -60,7 +60,7 @@ def havoc_perform_byte_addition_8(data, func):
         value = load_8(data, pos)
         value += 1 + RAND(AFL_ARITH_MAX)
         store_8(data, pos, value)
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
@@ -73,7 +73,7 @@ def havoc_perform_byte_subtraction_16(data, func):
         else:
             value -= 1 + RAND(AFL_ARITH_MAX)
         store_16(data, pos, value)
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
@@ -86,7 +86,7 @@ def havoc_perform_byte_addition_16(data, func):
         else:
             value += 1 + RAND(AFL_ARITH_MAX)
         store_16(data, pos, value)
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
@@ -99,7 +99,7 @@ def havoc_perform_byte_subtraction_32(data, func):
         else:
             value -= 1 + RAND(AFL_ARITH_MAX)
         store_32(data, pos, value)
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
@@ -112,14 +112,14 @@ def havoc_perform_byte_addition_32(data, func):
         else:
             value += 1 + RAND(AFL_ARITH_MAX)
         store_32(data, pos, value)
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
 def havoc_perform_set_random_byte_value(data, func):
     if len(data) >= 1:
         data[RAND(len(data))] = 1 + RAND(0xff)
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 # Todo: somehow broken :-(
@@ -128,7 +128,7 @@ def havoc_perform_delete_random_byte(data, func):
         del_length = AFL_choose_block_len(len(data) - 1)
         del_from = RAND(len(data) - del_length + 1)
         data = data[del_from:del_from + del_length]
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
@@ -146,7 +146,7 @@ def havoc_perform_clone_random_byte(data, func):
 
         tail = data[clone_to:(len(data)  - clone_to)].tostring()
         data = array('B', head + body + tail)
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
@@ -164,7 +164,7 @@ def havoc_perform_byte_seq_override(data, func):
             value = RAND(0xff)
             for i in range(copy_length):
                 data[i+copy_to] = value
-        func(data.tostring())
+        func(data.tobytes())
     return data
 
 
@@ -189,8 +189,8 @@ def havoc_splicing(data, files=None):
 
             split_location = first_diff + RAND(last_diff - first_diff)
 
-            data = array('B', data.tostring()[:split_location] + file_data[split_location:len(data)])
-            #func(data.tostring())
+            data = array('B', data.tobytes()[:split_location] + file_data[split_location:len(data)])
+            #func(data.tobytes())
             break
 
     return data
@@ -210,8 +210,8 @@ def havoc_dict(data, func):
         dict_entry = dict_import[RAND(len(dict_import))]
         dict_entry = dict_entry[:len(data)]
         entry_pos = RAND(len(data)-len(dict_entry))
-        data = array('B',data.tostring()[:entry_pos] + dict_entry + data.tostring()[entry_pos+len(dict_entry):])
-        func(data.tostring())
+        data = array('B',data.tobytes()[:entry_pos] + dict_entry + data.tobytes()[entry_pos+len(dict_entry):])
+        func(data.tobytes())
     return data
 
 havoc_handler = [havoc_perform_bit_flip,

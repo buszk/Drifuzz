@@ -29,10 +29,12 @@ class Evaluation:
 			if os.path.exists(self.config.argument_values['work_dir'] + "/evaluation/data.csv"):
 				last = ""
 				with open(self.config.argument_values['work_dir'] + "/evaluation/data.csv", "rb") as f:
-					first = f.readline()
-					last = f.readlines()[-1]
-				self.time_offset = float(last.split(b";")[0])
-				log_eval("[EVAL]\tTime offset for evaluation file is " + str(self.time_offset))
+					lines = f.readlines()
+					if len(lines) > 0:
+						first = lines[0]
+						last = lines[-1]
+						self.time_offset = float(last.split(b";")[0])
+						log_eval("[EVAL]\tTime offset for evaluation file is " + str(self.time_offset))
 				self.performance_file = open(self.config.argument_values['work_dir'] + "/evaluation/data.csv", "a")
 			else:
 				self.time_offset = 0.0

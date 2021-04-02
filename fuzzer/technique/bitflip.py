@@ -151,7 +151,7 @@ def mutate_seq_four_walking_bytes_array(data, func, kafl_state=None, effector_ma
                 if not effector_map[i] or not effector_map[i-1] or not effector_map[i-2] or not effector_map[i-3]:
                     continue
             data[i] ^= 0xFF
-            func(data.tostring(), affected_bytes=[i-3, i-2, i-1, i])
+            func(data.tobytes(), affected_bytes=[i-3, i-2, i-1, i])
             data[i-3] ^= 0xFF
         data[len(data)-1] ^= 0xFF
         data[len(data)-2] ^= 0xFF

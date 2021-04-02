@@ -40,16 +40,16 @@ def mutate_seq_havoc_array(data, func, max_iterations, stacked=True, resize=Fals
 
     reseed()
     if resize:
-        copy = array('B', data.tostring() + data.tostring())
+        copy = array('B', data.tobytes() + data.tobytes())
     else:
-        copy = array('B', data.tostring())
+        copy = array('B', data.tobytes())
 
     cnt = 0
     for i in range(max_iterations):
         if resize:
-            copy = array('B', data.tostring() + data.tostring())
+            copy = array('B', data.tobytes() + data.tobytes())
         else:
-            copy = array('B', data.tostring())
+            copy = array('B', data.tobytes())
 
         value = RAND(AFL_HAVOC_STACK_POW2)
         if files_to_splice:
@@ -60,9 +60,9 @@ def mutate_seq_havoc_array(data, func, max_iterations, stacked=True, resize=Fals
             handler = random.choice(havoc_handler)
             if not stacked:
                 if resize:
-                    copy = array('B', data.tostring() + data.tostring())
+                    copy = array('B', data.tobytes() + data.tobytes())
                 else:
-                    copy = array('B', data.tostring())
+                    copy = array('B', data.tobytes())
             copy = handler(copy[:(64<<10)], func)
             cnt += 1
             if cnt >= max_iterations:
