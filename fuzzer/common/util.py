@@ -74,7 +74,7 @@ def prepare_working_dir(directory_path, purge=False):
         if os.path.exists("/dev/shm/kafl_tfilter"):
             os.remove("/dev/shm/kafl_tfilter")
 
-    if len(os.listdir(directory_path)) == 0:
+    if len(os.listdir(directory_path)) < len(folders):
         for folder in folders:
             os.makedirs(directory_path + folder)
     else:
