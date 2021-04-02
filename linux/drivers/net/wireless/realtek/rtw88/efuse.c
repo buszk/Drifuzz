@@ -79,6 +79,7 @@ static int rtw_dump_logical_efuse_map(struct rtw_dev *rtwdev, u8 *phy_map,
 			phy_idx += 2;
 		}
 	}
+	printk(KERN_INFO "dump till: phy_idx %x\n", phy_idx);
 	return 0;
 }
 
@@ -112,6 +113,7 @@ static int rtw_dump_physical_efuse_map(struct rtw_dev *rtwdev, u8 *map)
 
 		*(map + addr) = (u8)(efuse_ctl & BIT_MASK_EF_DATA);
 	}
+	printk(KERN_INFO "physical addr till: %x", addr);
 
 	return 0;
 }
