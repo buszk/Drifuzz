@@ -93,7 +93,7 @@ class Communicator:
     def __init__(self, num_processes=1):
         self.num_processes = num_processes
         self.files = ["/dev/shm/drifuzz_master_", "/dev/shm/drifuzz_mapserver_", "/dev/shm/drifuzz_bitmap_"]
-        self.sizes = [(65 << 10), (65 << 10), bitmap_size]
+        self.sizes = [(100 << 10), (100 << 10), bitmap_size]
         self.tmp_shm = [{}, {}, {}]
         self.tasks_per_requests = 1
         
