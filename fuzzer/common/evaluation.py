@@ -140,5 +140,6 @@ class Evaluation:
 				str(state.level) + ";" +\
 				str(state.cycles) + ";" +\
 				str(state.fav_pending) + ";" +\
-				str(blacklisted)+ "\n")
+				str(blacklisted) + ";" +\
+				str(state.byte_covered)+ "\n")
 			self.performance_file.flush()
