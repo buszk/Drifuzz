@@ -636,14 +636,14 @@ class MasterProcess:
         Method to load an entire master state from JSON file...
         """
 
-        self.global_model.load_data()
-        with open(FuzzerConfiguration().argument_values['work_dir'] + "/master.json", 'r') as infile:
-            dump = json.load(infile)
-            for key, value in dump.items():
-                if key == "kafl_state":
-                    self.kafl_state.load_data(value)
-                else:
-                    setattr(self, key, value)
+        if os.path.exists(FuzzerConfiguration().argument_values['work_dir'] + "/master.json"):
+            with open(FuzzerConfiguration().argument_values['work_dir'] + "/master.json", 'r') as infile:
+                dump = json.load(infile)
+                for key, value in dump.items():
+                    if key == "kafl_state":
+                        self.kafl_state.load_data(value)
+                    else:
+                        setattr(self, key, value)
 
         # copyfile(self.config.argument_values['work_dir'] + "/kafl_filter0", "/dev/shm/kafl_filter0")
 

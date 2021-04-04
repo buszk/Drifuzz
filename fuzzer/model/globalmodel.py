@@ -1,3 +1,4 @@
+import os
 import json
 from common.util import json_dumper
 
@@ -8,6 +9,7 @@ class GlobalModel():
         self.next_free_idx = 0
         self.read_idx:dict = {}
         self.dma_idx:dict = {}
+        self.load_data()
 
     def get_read_idx(self, key, size, cnt):
         if key in self.read_idx.keys():
@@ -68,19 +70,20 @@ class GlobalModel():
         """
         Method to load an entire master state from JSON file...
         """
-        with open(self.config.argument_values['work_dir'] + "/globalmodule.json", \
-                        'r') as infile:
-            dump = json.load(infile)
-            for key, value in dump.items():
-                if key == 'next_free_idx':
-                    setattr(self, key, value)
-                elif key == 'read_idx' or key == 'dma_idx':
-                    d = {}
-                    for entry in value:
-                        if isinstance(entry['key'], list):
-                            k = tuple(entry['key'])
-                        elif isinstance(entry['key'], int):
-                            k = entry['key']
-                        d[k] = entry['value']
-                    setattr(self, key, d)
+        if os.path.exists(self.config.argument_values['work_dir'] + "/globalmodule.json"):
+            with open(self.config.argument_values['work_dir'] + "/globalmodule.json", \
+                            'r') as infile:
+                dump = json.load(infile)
+                for key, value in dump.items():
+                    if key == 'next_free_idx':
+                        setattr(self, key, value)
+                    elif key == 'read_idx' or key == 'dma_idx':
+                        d = {}
+                        for entry in value:
+                            if isinstance(entry['key'], list):
+                                k = tuple(entry['key'])
+                            elif isinstance(entry['key'], int):
+                                k = entry['key']
+                            d[k] = entry['value']
+                        setattr(self, key, d)
                     
