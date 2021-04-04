@@ -3,7 +3,7 @@ __author__ = 'sergej'
 from array import array
 from technique.helper import *
 from technique.havoc_handler import *
-# from common.config import FuzzerConfiguration
+from common.config import FuzzerConfiguration
 # from common.debug import logger
 
 def load_dict(file_name):
@@ -23,8 +23,8 @@ def load_dict(file_name):
 #     append_handler(havoc_dict)
 #     append_handler(havoc_dict)
 
-# location_findings = FuzzerConfiguration().argument_values['work_dir'] + "/findings/"
-# location_corpus = FuzzerConfiguration().argument_values['work_dir'] + "/corpus/"
+location_findings = FuzzerConfiguration().argument_values['work_dir'] + "/findings/"
+location_corpus = FuzzerConfiguration().argument_values['work_dir'] + "/corpus/"
 
 def havoc_range(perf_score):
 

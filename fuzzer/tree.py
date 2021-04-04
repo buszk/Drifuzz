@@ -458,8 +458,8 @@ class KaflTree:
 
     def __prepare_finished(self):
         if not self.random_shuffled:
-            favorite = filter(lambda x: self.__get_from_ref(x).node_type == KaflNodeType.favorite, self.finished_buf)
-            regular = filter(lambda x: self.__get_from_ref(x).node_type != KaflNodeType.favorite, self.finished_buf)
+            favorite = list(filter(lambda x: self.__get_from_ref(x).node_type == KaflNodeType.favorite, self.finished_buf))
+            regular = list(filter(lambda x: self.__get_from_ref(x).node_type != KaflNodeType.favorite, self.finished_buf))
             random.shuffle(favorite)
             random.shuffle(regular)
             self.finished_buf = favorite + regular
@@ -538,8 +538,6 @@ class KaflTree:
                 self.fav_bitmap_updated = True
 
     def __are_new_bits_present(self, new_bitmap):
-        print(type(self.bitmap))
-        print(type(new_bitmap))
         log_tree('are_new_bits_present')
         cnt = 0
         for b in new_bitmap:
@@ -560,7 +558,6 @@ class KaflTree:
                         # Find the most significant bit ...
                         if (new_bitmap[i]+1 & self.buckets[j]) != 0:
                             # Check if the bucket slot is free ...
-                            # print(self.bitmap[i], ' ', self.buckets[j])
                             if (self.bitmap[i] & self.buckets[j]) == 0:# and j > 1:
                                 counter += 1
                                 found = True
@@ -733,7 +730,6 @@ class KaflTree:
     def save_data(self):
         ignore = ["bitmap_fd", "crash_bitmap_fd", "kasan_bitmap_fd", "timeout_bitmap_fd", "bitmap", "crash_bitmap", "kasan_bitmap", "timeout_bitmap"]
         dump = {}
-        print('saving tree data')
         for key, value in self.__dict__.items():
             if key != 'graph' and key not in ignore:
                 dump[key] = value
@@ -741,7 +737,6 @@ class KaflTree:
         log_tree(str(dump))
         with open(FuzzerConfiguration().argument_values['work_dir'] + "/tree.json", 'w') as outfile:
             json.dump(dump, outfile, default=json_dumper)
-        print('tree data saved')
 
     @classmethod
     def load_data(cls, enable_graphviz=False):

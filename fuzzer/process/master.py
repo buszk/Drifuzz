@@ -73,8 +73,8 @@ class MasterProcess:
         self.use_effector_map = False
         self.arith_max = 35
         self.refresh_rate = 0.25
-        # if not self.config.argument_values['D']:
-        #     self.use_effector_map = False
+        if not self.config.argument_values['D']:
+            self.use_effector_map = False
 
         self.global_model = GlobalModel(self.config)
 
@@ -93,14 +93,10 @@ class MasterProcess:
             if tmp_obj.tag == tag:
                 return tmp_obj
             elif tmp_obj.tag == DRIFUZZ_REQ_READ_IDX:
-                # print(tmp_obj.data)
                 res = self.global_model.get_read_idx(*tmp_obj.data)
-                # print("returned")
                 send_msg(DRIFUZZ_REQ_READ_IDX, res, self.comm.to_slave_queues[tmp_obj.source])
             elif tmp_obj.tag == DRIFUZZ_REQ_DMA_IDX:
-                # print(tmp_obj.data)
                 res = self.global_model.get_dma_idx(*tmp_obj.data)
-                # print("returned")
                 send_msg(DRIFUZZ_REQ_DMA_IDX, res, self.comm.to_slave_queues[tmp_obj.source])
             else:
                 queue.put(tmp_obj)
@@ -117,7 +113,7 @@ class MasterProcess:
         if not self.load_old_state:
             self.kafl_state.runtime = time.time()
         self.kafl_state.runtime = time.time()
-        print('KAFL_TAG_OUTPUT')
+        # print('KAFL_TAG_OUTPUT')
         send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
 
 
@@ -152,7 +148,6 @@ class MasterProcess:
             self.__buffered_handler(payload)
 
     def __buffered_handler(self, payload, affected_bytes=None, last_payload=False):
-        print('buffer handler')
         if not self.stage_abortion:
             #self.abortion_counter += 1
             if not last_payload:
@@ -232,11 +227,9 @@ class MasterProcess:
                 send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
             elif msg.tag == DRIFUZZ_REQ_READ_IDX:
                 res = self.global_model.get_read_idx(*msg.data)
-                print("Sending read index")
                 send_msg(DRIFUZZ_REQ_READ_IDX, res, self.comm.to_slave_queues[msg.source])
             elif msg.tag == DRIFUZZ_REQ_DMA_IDX:
                 res = self.global_model.get_dma_idx(*msg.data)
-                print("Sending dma index")
                 send_msg(DRIFUZZ_REQ_DMA_IDX, res, self.comm.to_slave_queues[msg.source])
             else:
                 raise Exception("Unknown msg-tag received in master process...")
@@ -263,9 +256,6 @@ class MasterProcess:
             return payload, True
 
     def __task_send(self, tasks, qid, dest):
-        print('task send')
-        print(f"{len(tasks)=}")
-        print(f"{len(tasks[0])=}")
         fs_shm = self.comm.get_master_payload_shm(int(qid))
         size = self.comm.get_master_payload_shm_size()
         fs_shm.seek(0)
@@ -282,7 +272,6 @@ class MasterProcess:
         send_msg(KAFL_TAG_JOB, data, dest)
 
     def __request_bitmap(self, payload):
-        print('req bitmap')
         send_msg(KAFL_TAG_REQ_BITMAP, payload, self.comm.to_slave_queues[0])
         msg = self.__recv_tagged_msg(self.comm.to_master_queue, KAFL_TAG_REQ_BITMAP)
         return msg.data
@@ -370,7 +359,7 @@ class MasterProcess:
         # print('master got bitmap')
         # data = [(self.payload, bitmap)]
         # send_msg(KAFL_INIT_BITMAP, data, self.comm.to_mapserver_queue)
-        print('init fuzzing loop finish')
+        # print('init fuzzing loop finish')
 
     def __calc_stage_iterations(self):
         self.kafl_state.progress_bitflip = 0
@@ -392,8 +381,8 @@ class MasterProcess:
         #             #log_master("IGN: " + str(i))
         #             limiter_map[i] = False
 
-        # if self.config.argument_values['D']:
-        if True:
+        if self.config.argument_values['D']:
+        # if True:
             self.kafl_state.progress_bitflip_amount = bitflip_range(self.payload, skip_null=self.skip_zero, effector_map=limiter_map)
             self.kafl_state.progress_arithmetic_amount = arithmetic_range(self.payload, skip_null=self.skip_zero,  effector_map=limiter_map, set_arith_max=self.arith_max)
             self.kafl_state.progress_interesting_amount = interesting_range(self.payload, skip_null=self.skip_zero,  effector_map=limiter_map)
@@ -428,7 +417,7 @@ class MasterProcess:
             #    self.__sampling(self.payload)
 
     def __perform_deterministic(self, payload_array, limiter_map):
-        # if self.config.argument_values['D']:
+        if self.config.argument_values['D']:
 
             # if not self.comm.sampling_failed_notifier.value:
             #     if self.use_effector_map:
@@ -605,11 +594,9 @@ class MasterProcess:
             msg = recv_msg(self.comm.to_master_queue)
             if msg.tag == DRIFUZZ_REQ_READ_IDX:
                 res = self.global_model.get_read_idx(*msg.data)
-                print("Sending read index")
                 send_msg(DRIFUZZ_REQ_READ_IDX, res, self.comm.to_slave_queues[msg.source])
             elif msg.tag == DRIFUZZ_REQ_DMA_IDX:
                 res = self.global_model.get_dma_idx(*msg.data)
-                print("Sending dma index")
                 send_msg(DRIFUZZ_REQ_DMA_IDX, res, self.comm.to_slave_queues[msg.source])
             else:
                 continue

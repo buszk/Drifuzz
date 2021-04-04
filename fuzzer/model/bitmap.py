@@ -10,7 +10,6 @@ class Bitmap():
     def __init__(self):
         self.shm = SharedMemory(None, flags = IPC_EXCL|IPC_CREAT, 
                 mode= 0o600, size = bitmap_size, init_character = b'\x00')
-        print('shm', self.shm)
         # to show we are alive
         self.shm.write('\x01')
         # print(self.bytes())

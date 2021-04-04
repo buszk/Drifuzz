@@ -12,6 +12,7 @@ from communicator import send_msg, recv_msg, recv_tagged_msg
 from model.model import Model
 from protocol import *
 from common.config import FuzzerConfiguration
+from common.debug import log_slave
 
 
 class SlaveState(IntEnum):
@@ -99,9 +100,7 @@ class SlaveThread(threading.Thread):
         # print(self.state)
         assert(self.state == SlaveState.WAITING)
         self.state = SlaveState.PROC_TASK
-        print('releasing')
         self.payload_sem.release()
-        print('released')
         # Todo one payload each time?
 
     def __respond_bitmap_req(self, response):
@@ -111,9 +110,7 @@ class SlaveThread(threading.Thread):
         self.payload = response.data
         assert(self.state == SlaveState.WAITING)
         self.state = SlaveState.PROC_BITMAP
-        print('releasing')
         self.payload_sem.release()
-        print('released')
             
     def open_global_bitmap(self):
         self.global_bitmap_fd = os.open(self.config.argument_values['work_dir'] + "/bitmap", os.O_RDWR | os.O_SYNC | os.O_CREAT)
@@ -143,7 +140,7 @@ class SlaveThread(threading.Thread):
             if self.global_bitmap[i] != 0:
                 global_cnt += 1
             
-        print('bitmap covers %d bytes; global bitmap covers %d bytes' % (result, global_cnt))
+        log_slave('bitmap covers %d bytes; global bitmap covers %d bytes' % (result, global_cnt), self.slave_id)
 
     def send_bitmap(self, time = 10, kasan = False, timeout = False, payload = None):
         if self.exit_if_reproduce():
@@ -198,9 +195,7 @@ class SlaveThread(threading.Thread):
             with open(self.reproduce, 'rb') as infile:
                 return infile.read()
         
-        print('acquring')
         self.payload_sem.acquire()
-        print('acqured')
         payload = self.payload
         # print(len(payload))
         assert(self.state != SlaveState.WAITING)
@@ -221,15 +216,12 @@ class SlaveThread(threading.Thread):
             return 0
     
     def req_dma_idx(self, key, size, cnt):
-        print('req_dma_idx: send_msg')
         send_msg(DRIFUZZ_REQ_DMA_IDX, (key, size, cnt), \
             self.comm.to_master_queue,  source=self.slave_id)
         # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
         # print("requesting")
-        print('req_dma_idx: acquire')
         if self.idx_sem.acquire(timeout=5):
             # print("requested")
-            print('req_dma_idx: acquired')
             return self.idx
         else:
             print('Req dma index: timeout')

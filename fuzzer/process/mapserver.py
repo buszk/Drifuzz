@@ -300,9 +300,7 @@ class MapserverProcess:
         bitmap_shm = self.comm.get_bitmap_shm(request.source)
 
         log_mapserver("bitmap")
-        print('bitmap')
         for result in results:
-            print(result.pos)
             if result.new_bits:
                 bitmap_shm.flush()
                 # bitmap_shm.seek(result.pos * self.comm.get_bitmap_shm_size())
@@ -318,7 +316,6 @@ class MapserverProcess:
                 for i in range(len(bitmap)):
                     if bitmap[i] != 255:
                         b += 1
-                print('mapserver bitmap bytes %d' % b)
             else:
                 payloads.append(None)
                 bitmaps.append(None)
@@ -420,12 +417,10 @@ class MapserverProcess:
 
     def loop(self):
         while True:
-            print('mapserver loop')
             log_mapserver('mapserver loop')
             self.__sync_handler()
             request = recv_msg(self.comm.to_mapserver_queue)
             log_mapserver('recv_msg ' + str(request.tag))
-            print('recv_msg ' + str(request.tag))
 
             if request.tag == KAFL_TAG_RESULT:
                 self.__result_tag_handler(request)

@@ -61,7 +61,7 @@ class SocketThread (threading.Thread):
                         # print(ret)
                         # If VM request reset, we close the connection
                         if Command(_ty) == Command.REQ_RESET:
-                            print('REQ_RESET')
+                            # print('REQ_RESET')
                             break            
                         if ret != None and opt['retfmt'] != '':
                             _ret = struct.pack(opt['retfmt'], *ret)

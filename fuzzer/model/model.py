@@ -172,9 +172,9 @@ class Model(object):
     def handle_exec_init(self):
         self.init_time = time.time()
         self.log = []
-        print("requesting payload")
+        # print("requesting payload")
         self.payload:bytearray = self.slave.fetch_payload()
-        print(self.payload[0:20])
+        # print(self.payload[0:20])
         self.payload_len = len(self.payload)
         self.data_cnt = {}
         self.read_cnt = {}
@@ -183,7 +183,7 @@ class Model(object):
 
     def __submit_case(self, kasan=False, timeout=False):
         elapsed = time.time() - self.init_time
-        print("Time spent:", elapsed)
+        # print("Time spent:", elapsed)
         self.slave.send_bitmap(time=elapsed, kasan=kasan, timeout=timeout, payload=self.payload)
 
     def handle_exec_exit(self):
@@ -191,7 +191,7 @@ class Model(object):
         return (0,)
 
     def handle_vm_ready(self):
-        print("VM ready")
+        # print("VM ready")
         return (0,)
 
     def handle_vm_kasan(self):

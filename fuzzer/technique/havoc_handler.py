@@ -3,14 +3,14 @@ __author__ = 'sergej'
 from array import array
 
 from technique.helper import *
-# from common.util import read_binary_file, find_diffs
+from common.util import read_binary_file, find_diffs
 # from common.debug import logger
 
 
 def havoc_perform_bit_flip(data, func):
     if len(data) >= 1:
         bit = RAND(len(data) << 3)
-        data[bit/8] ^= 1 << (bit % 8)
+        data[bit//8] ^= 1 << (bit % 8)
         func(data.tobytes())
     return data
 

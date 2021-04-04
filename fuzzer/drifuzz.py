@@ -78,7 +78,7 @@ def main():
         slave.start()
     
 
-    print('Starting master loop')
+    # print('Starting master loop')
     try:
         master.loop()
     except KeyboardInterrupt:
