@@ -184,7 +184,7 @@ class Model(object):
     def __submit_case(self, kasan=False, timeout=False):
         elapsed = time.time() - self.init_time
         # print("Time spent:", elapsed)
-        self.slave.send_bitmap(time=elapsed, kasan=kasan, timeout=timeout, payload=self.payload)
+        self.slave.send_bitmap(perf=elapsed, kasan=kasan, timeout=timeout, payload=self.payload)
 
     def handle_exec_exit(self):
         self.__submit_case()

@@ -142,7 +142,7 @@ class SlaveThread(threading.Thread):
             
         log_slave('bitmap covers %d bytes; global bitmap covers %d bytes' % (result, global_cnt), self.slave_id)
 
-    def send_bitmap(self, time = 10, kasan = False, timeout = False, payload = None):
+    def send_bitmap(self, perf = 10, kasan = False, timeout = False, payload = None):
         if self.exit_if_reproduce():
             return
 
@@ -172,7 +172,7 @@ class SlaveThread(threading.Thread):
                 mapserver_payload_shm.write(struct.pack('<I', len(payload)))
                 mapserver_payload_shm.write(payload)
             result = FuzzingResult(0, False, timeout, kasan, self.affected_bytes[0],
-                    self.slave_id, time, reloaded=False, new_bits=hnb, qid=self.slave_id)
+                    self.slave_id, perf, reloaded=False, new_bits=hnb, qid=self.slave_id)
             # Notify mapserver the result
             send_msg(KAFL_TAG_RESULT, [result], self.comm.to_mapserver_queue, source=self.slave_id)
             # Wait for mapserver to finish
@@ -182,6 +182,7 @@ class SlaveThread(threading.Thread):
         else:
             print("Error: slave thread in wrong state")
         self.state = SlaveState.WAITING
+        log_slave(f"Execution time: {time.time()-self.start_time}", self.slave_id)
 
     def fetch_payload(self):
         if self.stopped():
@@ -199,6 +200,8 @@ class SlaveThread(threading.Thread):
         payload = self.payload
         # print(len(payload))
         assert(self.state != SlaveState.WAITING)
+        self.start_time = time.time()
+        log_slave("fetch_payload", self.slave_id)
         return payload
 
     def req_read_idx(self, key, size, cnt):

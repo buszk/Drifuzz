@@ -148,9 +148,6 @@ class qemu:
     def __del__(self):
         if not self.process:
             return
-
-        os.system("kill -9 " + str(self.process.pid))
-
         try:
             if self.process:
                 try:
