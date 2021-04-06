@@ -83,7 +83,7 @@ class SlaveThread(threading.Thread):
         if self.comm.slave_termination.value:
             return False
         # Reuse self.payload
-        self.payload_sem.release()
+        # self.payload_sem.release()
         return True
 
     def __respond_job_req(self, response):
