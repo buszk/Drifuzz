@@ -97,14 +97,11 @@ void handle_stream_dma_exit(uint64_t dma_addr) {
 EXPORT_SYMBOL(handle_stream_dma_exit);
 
 static void handle_exec_init(void) {
+	printk(KERN_INFO "[GUEST_KERNEL] handle_exec_init\n");
     if (adapter) {
-		writeq(0, adapter->hw_addr + READY_ADDR);
         writeq(EXEC_INIT, adapter->hw_addr + CMD_ADDR);
 		writeq(ACT, adapter->hw_addr);
-		uint64_t res = 0;
-		do {
-			res = readq(adapter->hw_addr + READY_ADDR);
-		} while(res == 0);
+		writeq(ACT, adapter->hw_addr + READY_ADDR);
     }
 }
 static void handle_exec_exit(void) {
