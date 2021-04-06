@@ -207,5 +207,6 @@ class Model(object):
     def handle_exec_timeout(self):
         print("Execution timed out")
         self.__submit_case(timeout=True)
+        # Also let ommunicator release the socket connection
         self.slave.restart_vm()
         return (0,)

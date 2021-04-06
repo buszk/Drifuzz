@@ -60,8 +60,9 @@ class SocketThread (threading.Thread):
                         ret = self.model.handle(opts[Command(_ty)]['func'], *_args)
                         # print(ret)
                         # If VM request reset, we close the connection
-                        if Command(_ty) == Command.REQ_RESET:
-                            # print('REQ_RESET')
+                        if Command(_ty) == Command.REQ_RESET or \
+                            Command(_ty) == Command.EXEC_TIMEOUT:
+                            # Terminate the sock and wait for the next
                             break            
                         if ret != None and opt['retfmt'] != '':
                             _ret = struct.pack(opt['retfmt'], *ret)
