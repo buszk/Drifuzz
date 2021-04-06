@@ -72,9 +72,6 @@ class SlaveThread(threading.Thread):
 
     
     def restart_vm(self):
-        if self.reproduce and self.reproduce != "":
-            return False
-        
         while True:
             self.q.__del__()
             self.q = qemu(self.slave_id, config=self.config)
