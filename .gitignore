@@ -1,2 +1,12 @@
 *-build/
 tags
+
+.vscode/*
+
+*log
+*.pdf
+.gdb_history
+*.txt
+
+work*
+seed*
