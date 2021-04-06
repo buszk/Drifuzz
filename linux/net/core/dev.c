@@ -6191,6 +6191,7 @@ EXPORT_SYMBOL(__napi_schedule);
 bool napi_schedule_prep(struct napi_struct *n)
 {
 	unsigned long val, new;
+	printk(KERN_INFO "napi_schedule_prep\n");
 
 	do {
 		val = READ_ONCE(n->state);
@@ -6207,7 +6208,7 @@ bool napi_schedule_prep(struct napi_struct *n)
 		new |= (val & NAPIF_STATE_SCHED) / NAPIF_STATE_SCHED *
 						   NAPIF_STATE_MISSED;
 	} while (cmpxchg(&n->state, val, new) != val);
-
+	printk(KERN_INFO "res: %d\n", !(val & NAPIF_STATE_SCHED));
 	return !(val & NAPIF_STATE_SCHED);
 }
 EXPORT_SYMBOL(napi_schedule_prep);
