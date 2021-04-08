@@ -267,7 +267,8 @@ class SlaveThread(threading.Thread):
         # print('starting qemu')
         # self.comm.reload_semaphore.acquire()
         v = False
-        if self.reproduce and self.reproduce != "":
+        if (self.reproduce and self.reproduce != "") or \
+            self.config.argument_values['verbose']:
             v = True
         self.q.start(verbose=v)
         # self.comm.reload_semaphore.release()

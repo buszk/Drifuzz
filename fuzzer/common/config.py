@@ -251,6 +251,7 @@ class FuzzerConfiguration:
         parser.add_argument('-i', required=False, type=parse_ignore_range, metavar="[0-131072]",
                             help='range of bytes to skip during deterministic fuzzing stages (0-128KB).',
                             action='append')
+        parser.add_argument('--verbose', default=False, action='store_true')
         parser.add_argument('-e', required=False, help='disable evaluation mode.', action='store_false', default=True)
         # parser.add_argument('-S', required=False, metavar='Snapshot', help='specifiy snapshot title (default: kafl).', default="kafl", type=str)
         parser.add_argument('-D', required=False, help='skip deterministic stages (dumb mode).',action='store_false', default=True)
