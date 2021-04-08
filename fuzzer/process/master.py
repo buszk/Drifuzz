@@ -194,14 +194,11 @@ class MasterProcess:
         send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)     
 
     def __master_handler(self):
-        log_master('master_handler %s %f' %( self.mapserver_status_pending, time.time() - self.start))
         if (time.time() - self.start) >= self.refresh_rate and not self.mapserver_status_pending:
-            log_master('ticking')
             self.mapserver_status_pending = True
             send_msg(KAFL_TAG_MAP_INFO, None, self.comm.to_mapserver_queue)
             end = time.time()
             self.kafl_state.performance = ((self.counter * 1.0) / (end - self.start))
-            log_master('performance %d' % self.kafl_state.performance)
             self.kafl_state.performance_rb.append(((self.counter * 1.0) / (end - self.start)))
             self.kafl_state.max_performance_rb.append(((self.counter * 1.0) / (end - self.start)))
             self.start = time.time()
