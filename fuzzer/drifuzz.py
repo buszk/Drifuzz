@@ -25,6 +25,18 @@ def handle_pdb(sig, frame):
         print(th)
         traceback.print_stack(sys._current_frames()[th.ident])
         print()
+    orig_stdout = sys.stdout
+    orig_stderr = sys.stderr
+    with open('stacktrace.txt', 'a') as f:
+        sys.stdout = f
+        sys.stderr = f
+        for th in threading.enumerate():
+            print(th)
+            traceback.print_stack(sys._current_frames()[th.ident])
+            print()
+    sys.stdout = orig_stdout
+    sys.stderr = orig_stderr
+
 
 def main():
     signal.signal(signal.SIGUSR1, handle_pdb)
