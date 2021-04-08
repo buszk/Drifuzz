@@ -58,8 +58,7 @@ class SlaveThread(threading.Thread):
         
 
     def __del__(self):
-        if self.global_bitmap_fd:
-            os.close(self.global_bitmap_fd)
+        if self.global_bitmap:
             self.global_bitmap.close()
 
     def exit_if_reproduce(self):
@@ -71,7 +70,8 @@ class SlaveThread(threading.Thread):
         return False
 
     
-    def restart_vm(self):
+    def restart_vm(self, reuse=False):
+        log_slave(f"restarting vm {reuse=}", self.slave_id)
         while True:
             self.q.__del__()
             self.q = qemu(self.slave_id, config=self.config)
@@ -83,7 +83,9 @@ class SlaveThread(threading.Thread):
         if self.comm.slave_termination.value:
             return False
         # Reuse self.payload
-        # self.payload_sem.release()
+        if reuse:
+            log_slave(f"release payload in restart_vm", self.slave_id)
+            self.payload_sem.release()
         return True
 
     def __respond_job_req(self, response):
@@ -99,6 +101,7 @@ class SlaveThread(threading.Thread):
         # print(self.state)
         assert(self.state == SlaveState.WAITING)
         self.state = SlaveState.PROC_TASK
+        log_slave(f"release payload in __respond_job_req", self.slave_id)
         self.payload_sem.release()
         # Todo one payload each time?
 
@@ -109,12 +112,14 @@ class SlaveThread(threading.Thread):
         self.payload = response.data
         assert(self.state == SlaveState.WAITING)
         self.state = SlaveState.PROC_BITMAP
+        log_slave(f"release payload in __respond_bitmap_req", self.slave_id)
         self.payload_sem.release()
             
     def open_global_bitmap(self):
         self.global_bitmap_fd = os.open(self.config.argument_values['work_dir'] + "/bitmap", os.O_RDWR | os.O_SYNC | os.O_CREAT)
         os.ftruncate(self.global_bitmap_fd, self.bitmap_size)
         self.global_bitmap = mmap.mmap(self.global_bitmap_fd, self.bitmap_size, mmap.MAP_SHARED, mmap.PROT_WRITE | mmap.PROT_READ)
+        os.close(self.global_bitmap_fd)
 
     def check_for_unseen_bits(self, bitmap):
         if not self.global_bitmap:

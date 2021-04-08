@@ -2,6 +2,7 @@ import multiprocessing
 import socket
 import struct
 import os
+import sys
 import threading
 import queue
 import mmap
@@ -29,55 +30,65 @@ class SocketThread (threading.Thread):
         if not self.model:
             print('Error: socket thread has not yet set up model')
             return
+
         try:
             os.unlink(self.address)
         except OSError:
             if os.path.exists(self.address):
                 raise
-
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         sock.bind(self.address)
-        sock.listen(1)
+        sock.listen()
 
         while not self.stopped():
             sock.settimeout(0.1)
             try:
                 connection, _ = sock.accept()
+                # print(f"{self.address} {connection.fileno()=}", file=sys.stderr)
             except socket.timeout:
-                    continue
-            try:
-                connection.settimeout(0.1)
-                while not self.stopped():
-                    try:
-                        ty: bytearray[8] = connection.recv(8)
-                        if ty == b'':
-                            break
-                        _ty = struct.unpack('<Q', ty)[0]
-                        opt = opts[Command(_ty)]
-                        args:bytearray[opt['argbytes']] = connection.recv(opt['argbytes'])
-                        _args = struct.unpack(opt['argfmt'], args)
-                        # print(_args)
-                        ret = self.model.handle(opts[Command(_ty)]['func'], *_args)
-                        # print(ret)
-                        # If VM request reset, we close the connection
-                        if Command(_ty) == Command.REQ_RESET or \
-                            Command(_ty) == Command.EXEC_TIMEOUT:
-                            # Terminate the sock and wait for the next
-                            break            
-                        if ret != None and opt['retfmt'] != '':
-                            _ret = struct.pack(opt['retfmt'], *ret)
-                            connection.send(_ret)
-                        elif ret != None and isinstance(ret[0], bytes):
-                            connection.send(ret[0])
-                            connection.send(struct.pack('<Q', ret[1]))
-
-                    except socket.timeout:
-                        pass
-                    except ConnectionResetError:
+                continue
+            connection.settimeout(0.1)
+            while not self.stopped():
+                try:
+                    ty: bytearray[8] = connection.recv(8)
+                    if ty == b'':
                         break
-                
-            finally:
-                connection.close()
+                    _ty = struct.unpack('<Q', ty)[0]
+                    opt = opts[Command(_ty)]
+
+                    args:bytearray[opt['argbytes']] = connection.recv(opt['argbytes'])
+                    _args = struct.unpack(opt['argfmt'], args)
+                    ret = self.model.handle(opts[Command(_ty)]['func'], *_args)
+                    last_command = _ty
+                    # Terminate the sock and wait for the next
+                    if Command(_ty) == Command.REQ_RESET or \
+                        Command(_ty) == Command.EXEC_TIMEOUT:
+                        break
+                    if ret != None and opt['retfmt'] != '':
+                        _ret = struct.pack(opt['retfmt'], *ret)
+                        connection.send(_ret)
+                    elif ret != None and isinstance(ret[0], bytes):
+                        connection.send(ret[0])
+                        connection.send(struct.pack('<Q', ret[1]))
+
+                except socket.timeout:
+                    pass
+                except ConnectionResetError as e:
+                    print(f"{last_command=}", file=sys.stderr)
+                    print("ConnectionResetError", file=sys.stderr)
+                    break
+                except OSError as e:
+                    print("==========", file=sys.stderr)
+                    print(f"{self.address=}", file=sys.stderr)
+                    print(f"{connection.fileno()=}", file=sys.stderr)
+                    print(f'{last_command=}', file=sys.stderr)
+                    print(e, file=sys.stderr)
+                    raise
+
+            connection.close()
+            connection = None
+        sock.close()
+        sock = None
                 
     def stop(self):
         self._stop_event.set()

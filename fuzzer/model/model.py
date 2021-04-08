@@ -202,6 +202,10 @@ class Model(object):
 
     def handle_req_reset(self):
         print("VM req hard reset")
+        self.slave.restart_vm(reuse=True)
+        return (0,)
+    
+    def restart_vm(self):
         self.slave.restart_vm()
     
     def handle_exec_timeout(self):
