@@ -59,12 +59,12 @@ opts = {
         'func': 'req_reset',
         'argbytes': 0,
         'argfmt': '',
-        'retfmt': ''
+        'retfmt': '<Q'
     },
     Command.EXEC_TIMEOUT: {
         'func': 'exec_timeout',
         'argbytes': 0,
         'argfmt': '',
-        'retfmt': ''
+        'retfmt': '<Q'
     }
 }
