@@ -124,17 +124,6 @@ class MapserverProcess:
             self.mapserver_state_obj.pending = len(msg.data)
             self.treemap = KaflTree(msg.data, enable_graphviz=self.enable_graphviz)
 
-    def __restart_vm(self):
-        while True:
-            self.q.__del__()
-            self.q = qemu(1337, self.config)
-            if self.q.start():
-                break
-            else:
-                time.sleep(0.5)
-                self.__log("Fail Reload")
-        
-
     def __add_new_hash(self, new_hash, bitmap, payload, performance):
         """
         try:
