@@ -93,11 +93,13 @@ class MasterProcess:
             if tmp_obj.tag == tag:
                 return tmp_obj
             elif tmp_obj.tag == DRIFUZZ_REQ_READ_IDX:
+                key, _, _ = tmp_obj.data
                 res = self.global_model.get_read_idx(*tmp_obj.data)
-                send_msg(DRIFUZZ_REQ_READ_IDX, res, self.comm.to_slave_queues[tmp_obj.source])
+                send_msg(DRIFUZZ_REQ_READ_IDX, (key, res), self.comm.to_slave_queues[tmp_obj.source])
             elif tmp_obj.tag == DRIFUZZ_REQ_DMA_IDX:
+                key, _, _ = tmp_obj.data
                 res = self.global_model.get_dma_idx(*tmp_obj.data)
-                send_msg(DRIFUZZ_REQ_DMA_IDX, res, self.comm.to_slave_queues[tmp_obj.source])
+                send_msg(DRIFUZZ_REQ_DMA_IDX, (key, res), self.comm.to_slave_queues[tmp_obj.source])
             else:
                 queue.put(tmp_obj)
 
@@ -223,11 +225,13 @@ class MasterProcess:
                 self.mapserver_status_pending = False
                 send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
             elif msg.tag == DRIFUZZ_REQ_READ_IDX:
+                key, _, _ = msg.data
                 res = self.global_model.get_read_idx(*msg.data)
-                send_msg(DRIFUZZ_REQ_READ_IDX, res, self.comm.to_slave_queues[msg.source])
+                send_msg(DRIFUZZ_REQ_READ_IDX, (key, res), self.comm.to_slave_queues[msg.source])
             elif msg.tag == DRIFUZZ_REQ_DMA_IDX:
+                key, _, _ = msg.data
                 res = self.global_model.get_dma_idx(*msg.data)
-                send_msg(DRIFUZZ_REQ_DMA_IDX, res, self.comm.to_slave_queues[msg.source])
+                send_msg(DRIFUZZ_REQ_DMA_IDX, (key, res), self.comm.to_slave_queues[msg.source])
             else:
                 raise Exception("Unknown msg-tag received in master process...")
 
@@ -590,11 +594,13 @@ class MasterProcess:
         while True:
             msg = recv_msg(self.comm.to_master_queue)
             if msg.tag == DRIFUZZ_REQ_READ_IDX:
+                key, _, _ = msg.data
                 res = self.global_model.get_read_idx(*msg.data)
-                send_msg(DRIFUZZ_REQ_READ_IDX, res, self.comm.to_slave_queues[msg.source])
+                send_msg(DRIFUZZ_REQ_READ_IDX, (key, res), self.comm.to_slave_queues[msg.source])
             elif msg.tag == DRIFUZZ_REQ_DMA_IDX:
+                key, _, _ = msg.data
                 res = self.global_model.get_dma_idx(*msg.data)
-                send_msg(DRIFUZZ_REQ_DMA_IDX, res, self.comm.to_slave_queues[msg.source])
+                send_msg(DRIFUZZ_REQ_DMA_IDX, (key, res), self.comm.to_slave_queues[msg.source])
             else:
                 continue
 

@@ -55,6 +55,7 @@ class SlaveThread(threading.Thread):
         self.comm.slave_locks_bitmap[self.slave_id].acquire()
     
         self.reproduce = self.config.argument_values['reproduce']
+        self.query_key = (0,)
         
 
     def __del__(self):
@@ -217,6 +218,7 @@ class SlaveThread(threading.Thread):
         return payload
 
     def req_read_idx(self, key, size, cnt):
+        self.query_key = key
         send_msg(DRIFUZZ_REQ_READ_IDX, (key, size, cnt), \
             self.comm.to_master_queue,  source=self.slave_id)
         # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
@@ -231,6 +233,7 @@ class SlaveThread(threading.Thread):
             return 0
     
     def req_dma_idx(self, key, size, cnt):
+        self.query_key = key
         send_msg(DRIFUZZ_REQ_DMA_IDX, (key, size, cnt), \
             self.comm.to_master_queue,  source=self.slave_id)
         # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
@@ -264,8 +267,13 @@ class SlaveThread(threading.Thread):
 
         elif response.tag == DRIFUZZ_REQ_READ_IDX or \
              response.tag == DRIFUZZ_REQ_DMA_IDX:
-            self.idx = response.data
-            self.idx_sem.release()
+            # If qemu was restarted and we receive this,
+            # it's from last execution before restarting
+            # We discard the result
+            key, idx = response.data
+            if key == self.query_key:
+                self.idx = idx
+                self.idx_sem.release()
 
         else:
             log_slave("Received TAG: " + str(response.tag), self.slave_id)
