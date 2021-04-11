@@ -271,6 +271,7 @@ class MasterProcess:
             for i in range(len(tasks)):
                 data.append(None)
         send_msg(KAFL_TAG_JOB, data, dest)
+        log_master(f"task sent to {qid=}")
 
     def __request_bitmap(self, payload):
         send_msg(KAFL_TAG_REQ_BITMAP, payload, self.comm.to_slave_queues[0])

@@ -193,7 +193,7 @@ class SlaveThread(threading.Thread):
             # Ask master for new payloads
             send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
         else:
-            print("Error: slave thread in wrong state")
+            log_slave("Error: slave thread in wrong state", self.slave_id)
         self.state = SlaveState.WAITING
         log_slave(f"Execution time: {time.time()-self.start_time}", self.slave_id)
 
@@ -227,7 +227,7 @@ class SlaveThread(threading.Thread):
             # print("requested")
             return self.idx
         else:
-            print('Req read index: timeout')
+            log_slave('Req read index: timeout', self.slave_id)
             print(key, " ", size, " ", cnt)
             # self.stop()
             return 0
@@ -242,7 +242,7 @@ class SlaveThread(threading.Thread):
             # print("requested")
             return self.idx
         else:
-            print('Req dma index: timeout')
+            log_slave('Req dma index: timeout', self.slave_id)
             # self.stop()
             return 0
         

@@ -6,8 +6,10 @@ import sys
 import threading
 import queue
 import mmap
+import time
 from model.model import Model
 from cmdparser import opts, Command
+from common.debug import log_slave
 
 
 
@@ -45,12 +47,22 @@ class SocketThread (threading.Thread):
             try:
                 connection, _ = sock.accept()
                 # print(f"{self.address} {connection.fileno()=}", file=sys.stderr)
+                log_slave("connection established", self.model.slave.slave_id)
             except socket.timeout:
                 continue
             connection.settimeout(0.1)
+            last_contact_time = time.time()
             while not self.stopped():
                 try:
+                    # lost contact for a minute
+                    if time.time() - last_contact_time > 60:
+                        self.model.slave.restart_vm(reuse=True)
+                        break
                     ty: bytearray[8] = connection.recv(8)
+                    last_contact_time = time.time()
+                    if self.stopped():
+                        break
+                    # log_slave(f"received {ty}", self.model.slave.slave_id)
                     if ty == b'':
                         break
                     _ty = struct.unpack('<Q', ty)[0]
@@ -64,8 +76,11 @@ class SocketThread (threading.Thread):
                     if Command(_ty) == Command.REQ_RESET or \
                         Command(_ty) == Command.EXEC_TIMEOUT:
                         break
+                    if self.stopped():
+                        break
                     if ret != None and opt['retfmt'] != '':
                         _ret = struct.pack(opt['retfmt'], *ret)
+                        # log_slave(f"sent {_ret}", self.model.slave.slave_id)
                         connection.send(_ret)
                     elif ret != None and isinstance(ret[0], bytes):
                         connection.send(ret[0])
@@ -76,8 +91,10 @@ class SocketThread (threading.Thread):
                 except ConnectionResetError as e:
                     print(f"{last_command=}", file=sys.stderr)
                     print("ConnectionResetError", file=sys.stderr)
+                    log_slave("ConnectionResetError", self.model.slave.slave_id)
                     break
                 except OSError as e:
+                    log_slave("OSError", self.model.slave.slave_id)
                     print("==========", file=sys.stderr)
                     print(f"{self.address=}", file=sys.stderr)
                     print(f"{connection.fileno()=}", file=sys.stderr)
@@ -87,6 +104,7 @@ class SocketThread (threading.Thread):
 
             connection.close()
             connection = None
+            log_slave("connection dropped", self.model.slave.slave_id)
         sock.close()
         sock = None
                 
