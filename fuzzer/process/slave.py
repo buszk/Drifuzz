@@ -72,10 +72,18 @@ class SlaveThread(threading.Thread):
     
     def restart_vm(self, reuse=False):
         log_slave(f"restarting vm {reuse=}", self.slave_id)
+        self.query_key = (0,)
         while True:
             self.q.__del__()
             self.q = qemu(self.slave_id, config=self.config)
-            if self.q.start(verbose=(self.reproduce and self.reproduce != "")):
+            v = False
+            g = False
+            if self.reproduce and self.reproduce != "":
+                v = True
+            elif self.config.argument_values['verbose']:
+                v = True
+                g = True
+            if self.q.start(verbose=v, gdb=g):
                 break
             else:
                 time.sleep(1)
@@ -267,10 +275,13 @@ class SlaveThread(threading.Thread):
         # print('starting qemu')
         # self.comm.reload_semaphore.acquire()
         v = False
-        if (self.reproduce and self.reproduce != "") or \
-            self.config.argument_values['verbose']:
+        g = False
+        if self.reproduce and self.reproduce != "":
             v = True
-        self.q.start(verbose=v)
+        elif self.config.argument_values['verbose']:
+            v = True
+            g = True
+        self.q.start(verbose=v, gdb=g)
         # self.comm.reload_semaphore.release()
         # print('started qemu')
         send_msg(KAFL_TAG_REQ, self.q.qemu_id, self.comm.to_master_queue, source=self.slave_id)

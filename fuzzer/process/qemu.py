@@ -126,22 +126,32 @@ class qemu:
         except:
             pass
 
-    def start(self, verbose=False):
+    def start(self, verbose=False, gdb=False):
+        cmd = self.cmd
+        if gdb:
+            cmd = ['gdb', 
+                    '-ex', 'handle SIGTTOU noprint',
+                    '-ex', 'handle SIGTTIN noprint',
+                    '-ex', 'break exit',
+                    '-ex', 'r',
+                    '-ex', 'bt',
+                    '--args'] + self.cmd
         for _ in range(10):
             try:
                 if verbose:
-                    self.process = subprocess.Popen(self.cmd,
+                    self.process = subprocess.Popen(cmd,
                                                     stdin=None,
                                                     stdout=None,
                                                     stderr=None)
                 else:
                     #TODO: maybe a log file? devnull is fast, PIPE is very slow
-                    self.process = subprocess.Popen(self.cmd,
+                    self.process = subprocess.Popen(cmd,
                                                     stdin=subprocess.DEVNULL,
                                                     stdout=subprocess.DEVNULL,
                                                     stderr=subprocess.DEVNULL)
             except OSError as e:
                 log_qemu("OSError in subprocess.Popen", self.qemu_id)
+                print("OSError in subprocess.Popen", self.qemu_id)
                 try:
                     self.process.kill()
                     self.process = None
