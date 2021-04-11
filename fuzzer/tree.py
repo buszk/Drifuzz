@@ -722,10 +722,17 @@ class KaflTree:
         self.graph.draw()
 
     def get_num_of_untouched_nodes(self):
-        try:
-            return len(self.references[self.current])
-        except KeyError:
-            return 0
+        n = 0
+        if self.current in self.references:
+            for node_index in self.references[self.current]:
+                node = self.all_nodes[node_index]
+                if not node.node_type >= KaflNodeType.crash:
+                    n += 1
+        return n
+        # try:
+        #     return len(self.references[self.current])
+        # except KeyError:
+        #     return 0
 
     def save_data(self):
         ignore = ["bitmap_fd", "crash_bitmap_fd", "kasan_bitmap_fd", "timeout_bitmap_fd", "bitmap", "crash_bitmap", "kasan_bitmap", "timeout_bitmap"]
