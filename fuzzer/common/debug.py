@@ -112,5 +112,8 @@ def log_core(msg):
 def log_info(msg):
     logger("[INFO]          " + msg)
 
+def log_modelserver(msg):
+    logger("[MODELSERV]     " + msg)
+
 
 

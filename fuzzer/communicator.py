@@ -128,6 +128,7 @@ class Communicator:
         
         self.to_update_queue = multiprocessing.Queue()
         self.to_master_queue = multiprocessing.Queue()
+        self.to_modelserver_queue = multiprocessing.Queue()
         self.to_master_from_mapserver_queue = multiprocessing.Queue()
         self.to_master_from_slave_queue = multiprocessing.Queue()
         self.to_mapserver_queue = multiprocessing.Queue()
@@ -139,6 +140,7 @@ class Communicator:
         self.to_master_from_mapserver_queue.cancel_join_thread()
         self.to_master_from_slave_queue.cancel_join_thread()
         self.to_mapserver_queue.cancel_join_thread()
+        self.to_modelserver_queue.cancel_join_thread()
 
         self.to_slave_queues = []
         for i in range(num_processes):

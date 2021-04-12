@@ -44,11 +44,14 @@ def main():
     comm = Communicator(num_processes = num_processes)
     master = MasterProcess(comm, reload=False)
     slave = SlaveThread(comm, 0, reload=True)
+    modelserver_process = multiprocessing.Process(name='MODELSERVER', target=modelserver_loader, args=(comm,))
     
+
     comm.start()
     comm.create_shm()
 
     slave.start()
+    modelserver_process.start()
     try:
         master.reproduce_loop()
     except KeyboardInterrupt:

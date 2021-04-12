@@ -10,6 +10,7 @@ from communicator import Communicator
 from process.master import MasterProcess
 from process.slave import SlaveThread
 from process.mapserver import mapserver_loader
+from process.modelserver import modelserver_loader
 from process.update import update_loader
 from common.debug import log_core, enable_logging
 from common.config import FuzzerConfiguration
@@ -70,6 +71,7 @@ def main():
     comm = Communicator(num_processes = num_processes)
     master = MasterProcess(comm, reload=reload)
     mapserver_process = multiprocessing.Process(name='MAPSERVER', target=mapserver_loader, args=(comm,reload))
+    modelserver_process = multiprocessing.Process(name='MODELSERVER', target=modelserver_loader, args=(comm,))
     if DO_USE_UI:
         update_process = multiprocessing.Process(name='UPDATE', target=update_loader, args=(comm,))
 
@@ -86,6 +88,7 @@ def main():
         time.sleep(.1)
 
     mapserver_process.start()
+    modelserver_process.start()
 
     for slave in slaves:
         slave.start()

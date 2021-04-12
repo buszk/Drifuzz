@@ -76,7 +76,7 @@ class MasterProcess:
         if not self.config.argument_values['D']:
             self.use_effector_map = False
 
-        self.global_model = GlobalModel(self.config)
+        # self.global_model = GlobalModel(self.config)
 
         self.load_old_state = False
         if reload:

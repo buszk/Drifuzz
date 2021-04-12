@@ -221,9 +221,10 @@ class SlaveThread(threading.Thread):
 
     def req_read_idx(self, key, size, cnt):
         send_msg(DRIFUZZ_REQ_READ_IDX, (key, size, cnt), \
-            self.comm.to_master_queue,  source=self.slave_id)
+            self.comm.to_modelserver_queue,  source=self.slave_id)
         # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
         # print("requesting")
+
         if self.idx_sem.acquire(timeout=5):
             # print("requested")
             return self.idx
@@ -235,7 +236,7 @@ class SlaveThread(threading.Thread):
     
     def req_dma_idx(self, key, size, cnt):
         send_msg(DRIFUZZ_REQ_DMA_IDX, (key, size, cnt), \
-            self.comm.to_master_queue,  source=self.slave_id)
+            self.comm.to_modelserver_queue,  source=self.slave_id)
         # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
         # print("requesting")
         if self.idx_sem.acquire(timeout=5):
