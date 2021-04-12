@@ -22,42 +22,19 @@ def handle_pdb(sig, frame):
         traceback.print_stack(sys._current_frames()[th.ident])
         print()
 
-# def handle_exit(sig, frame):
-#     global comm, slave
-#     print('Fuzzer exiting')
-#     comm.stop()
-#     print('comm to be stopped')
-#     slave.stop()
-#     print('slave to be stopped')
-
 def main():
-    global comm, slave
     signal.signal(signal.SIGUSR1, handle_pdb)
-    # signal.signal(signal.SIGINT, handle_exit)
     print(os.getpid())
 
-    config:FuzzerConfiguration = FuzzerConfiguration()
-    num_processes = 1
-
-    # prepare_working_dir(config.argument_values['work_dir'], purge=True)
-
-    comm = Communicator(num_processes = num_processes)
+    comm = Communicator(num_processes = 1)
     master = MasterProcess(comm, reload=False)
     slave = SlaveThread(comm, 0, reload=True)
-    modelserver_process = multiprocessing.Process(name='MODELSERVER', target=modelserver_loader, args=(comm,))
-    
-
     comm.start()
     comm.create_shm()
 
     slave.start()
-    modelserver_process.start()
-    try:
-        master.reproduce_loop()
-    except KeyboardInterrupt:
-        print('Received keyboard interrupt')
-        comm.stop()
-    
+    master.reproduce_loop()
+    slave.join()
 
 if __name__ == "__main__":
     main()

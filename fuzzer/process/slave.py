@@ -10,6 +10,7 @@ from .qemu import qemu
 from communicator import Communicator
 from communicator import send_msg, recv_msg, recv_tagged_msg
 from model.model import Model
+from model.globalmodel import GlobalModel
 from protocol import *
 from common.config import FuzzerConfiguration
 from common.debug import log_slave
@@ -55,6 +56,10 @@ class SlaveThread(threading.Thread):
         self.comm.slave_locks_bitmap[self.slave_id].acquire()
     
         self.reproduce = self.config.argument_values['reproduce']
+
+        self.globalmodel = None
+        if self.reproduce:
+            self.globalmodel = GlobalModel(self.config)
         
 
     def __del__(self):
@@ -65,13 +70,16 @@ class SlaveThread(threading.Thread):
         if self.reproduce and self.reproduce != "":
             print("Reproducing case. Stop here")
             self.stop()
-            os.kill(os.getpid(), signal.SIGINT)
+            self.comm.stop()
             return True
         return False
 
     
     def restart_vm(self, reuse=False):
         log_slave(f"restarting vm {reuse=}", self.slave_id)
+
+        if not reuse and self.exit_if_reproduce():
+            return
 
         # Consume the idx_sem if it is released
         self.idx_sem.acquire(blocking=False)
@@ -96,6 +104,7 @@ class SlaveThread(threading.Thread):
         # Reuse self.payload
         if reuse:
             log_slave(f"release payload in restart_vm", self.slave_id)
+            self.payload_sem.acquire(blocking=False)
             self.payload_sem.release()
         return True
 
@@ -220,32 +229,38 @@ class SlaveThread(threading.Thread):
         return payload
 
     def req_read_idx(self, key, size, cnt):
-        send_msg(DRIFUZZ_REQ_READ_IDX, (key, size, cnt), \
-            self.comm.to_modelserver_queue,  source=self.slave_id)
-        # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
-        # print("requesting")
-
-        if self.idx_sem.acquire(timeout=5):
-            # print("requested")
-            return self.idx
+        if self.globalmodel:
+            return self.globalmodel.get_read_idx(key, size, cnt)
         else:
-            log_slave('Req read index: timeout', self.slave_id)
-            print(key, " ", size, " ", cnt)
-            # self.stop()
-            return 0
+            send_msg(DRIFUZZ_REQ_READ_IDX, (key, size, cnt), \
+                self.comm.to_modelserver_queue,  source=self.slave_id)
+            # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
+            # print("requesting")
+
+            if self.idx_sem.acquire(timeout=5):
+                # print("requested")
+                return self.idx
+            else:
+                log_slave('Req read index: timeout', self.slave_id)
+                print(key, " ", size, " ", cnt)
+                # self.stop()
+                return 0
     
     def req_dma_idx(self, key, size, cnt):
-        send_msg(DRIFUZZ_REQ_DMA_IDX, (key, size, cnt), \
-            self.comm.to_modelserver_queue,  source=self.slave_id)
-        # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
-        # print("requesting")
-        if self.idx_sem.acquire(timeout=5):
-            # print("requested")
-            return self.idx
+        if self.globalmodel:
+            return self.globalmodel.get_dma_idx(key, size, cnt)
         else:
-            log_slave('Req dma index: timeout', self.slave_id)
-            # self.stop()
-            return 0
+            send_msg(DRIFUZZ_REQ_DMA_IDX, (key, size, cnt), \
+                self.comm.to_modelserver_queue,  source=self.slave_id)
+            # response = recv_tagged_msg(self.comm.to_slave_queues[self.slave_id], DRIFUZZ_REQ_READ_IDX)
+            # print("requesting")
+            if self.idx_sem.acquire(timeout=5):
+                # print("requested")
+                return self.idx
+            else:
+                log_slave('Req dma index: timeout', self.slave_id)
+                # self.stop()
+                return 0
         
     
     def interprocess_proto_handler(self):
