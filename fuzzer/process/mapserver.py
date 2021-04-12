@@ -63,7 +63,7 @@ def mapserver_loader(comm, reload):
         mapserver_process = MapserverProcess(comm, reload=reload)
         mapserver_process.loop()
     except KeyboardInterrupt:
-        # print('mapserver keyboard interrupt')
+        print('mapserver keyboard interrupt')
         if mapserver_process:
             print('mapserver saving')
             mapserver_process.treemap.save_data()
