@@ -12,8 +12,8 @@ args = parser.parse_args()
 
 drifuzz_path = dirname(dirname(abspath(__file__)))
 
-model_data_file = join(drifuzz_path, 'work-' + args.target + '-model', 'evaluation', 'data.csv')
-random_data_file = join(drifuzz_path, 'work-' + args.target + '-random', 'evaluation', 'data.csv')
+model_data_file = join(drifuzz_path, 'work', 'work-' + args.target + '-model', 'evaluation', 'data.csv')
+random_data_file = join(drifuzz_path, 'work', 'work-' + args.target + '-random', 'evaluation', 'data.csv')
 out_file = args.target + '.pdf'
 if not exists(model_data_file):
     print(f'File {model_data_file} does not exists')

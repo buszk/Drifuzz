@@ -9,6 +9,7 @@ import multiprocessing
 from communicator import Communicator
 from process.master import MasterProcess
 from process.slave import SlaveThread
+from process.concolic import ConcolicThread
 from process.mapserver import mapserver_loader
 from process.modelserver import modelserver_loader
 from process.update import update_loader
@@ -68,7 +69,7 @@ def main():
         reload = True
 
     DO_USE_UI = (USE_UI and not config.argument_values['verbose'])
-    comm = Communicator(num_processes = num_processes)
+    comm = Communicator(num_processes = num_processes, concolic_thread=True)
     master = MasterProcess(comm, reload=reload)
     mapserver_process = multiprocessing.Process(name='MAPSERVER', target=mapserver_loader, args=(comm,reload))
     modelserver_process = multiprocessing.Process(name='MODELSERVER', target=modelserver_loader, args=(comm,))
@@ -79,6 +80,8 @@ def main():
     for i in range(num_processes):
         slave = SlaveThread(comm, i, reload=reload)
         slaves.append(slave)
+    if config.argument_values['concolic']:
+        slaves.append(ConcolicThread(comm, num_processes))
 
     comm.start()
     comm.create_shm()

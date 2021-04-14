@@ -77,6 +77,7 @@ class MasterProcess:
             self.use_effector_map = False
 
         # self.global_model = GlobalModel(self.config)
+        self.concolic_payloads = []
 
         self.load_old_state = False
         if reload:
@@ -201,10 +202,14 @@ class MasterProcess:
         while True:
             msg = recv_msg(self.comm.to_master_queue)
             if msg.tag == KAFL_TAG_REQ:
-                self.__task_send(self.payload_buffer, msg.data, self.comm.to_slave_queues[int(msg.data)])
-                self.abortion_counter += len(self.payload_buffer)
-                self.counter += len(self.payload_buffer)
-                self.round_counter += len(self.payload_buffer)
+                if len(self.concolic_payloads) > 0:
+                    self.__task_send([self.concolic_payloads[0]], msg.data, self.comm.to_slave_queues[int(msg.data)], imported=True)
+                    self.concolic_payloads.pop(0)
+                else:
+                    self.__task_send(self.payload_buffer, msg.data, self.comm.to_slave_queues[int(msg.data)])
+                    self.abortion_counter += len(self.payload_buffer)
+                    self.counter += len(self.payload_buffer)
+                    self.round_counter += len(self.payload_buffer)
                 break
             elif msg.tag == KAFL_TAG_ABORT_REQ:
                 log_master("Abortion request received...")
@@ -216,6 +221,8 @@ class MasterProcess:
                 self.__process_mapserver_state(msg)
                 self.mapserver_status_pending = False
                 send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
+            elif msg.tag == DRIFUZZ_NEW_INPUT:
+                self.concolic_payloads += [msg.data]
             else:
                 raise Exception("Unknown msg-tag received in master process...")
 
@@ -240,7 +247,7 @@ class MasterProcess:
         else:
             return payload, True
 
-    def __task_send(self, tasks, qid, dest):
+    def __task_send(self, tasks, qid, dest, imported=False):
         fs_shm = self.comm.get_master_payload_shm(int(qid))
         size = self.comm.get_master_payload_shm_size()
         fs_shm.seek(0)
@@ -254,7 +261,11 @@ class MasterProcess:
             data = []
             for i in range(len(tasks)):
                 data.append(None)
-        send_msg(KAFL_TAG_JOB, data, dest)
+        if imported:
+            log_master(f"IMPORT task sent to {qid=}")
+            send_msg(DRIFUZZ_CONC_BITMAP, data, dest)
+        else:
+            send_msg(KAFL_TAG_JOB, data, dest)
         log_master(f"task sent to {qid=}")
 
     def __request_bitmap(self, payload):

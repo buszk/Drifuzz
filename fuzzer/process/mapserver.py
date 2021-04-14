@@ -145,6 +145,7 @@ class MapserverProcess:
         accepted = self.treemap.append(payload, bitmap, performance=performance)
         if accepted:
             self.hash_list.add(new_hash)
+            send_msg(DRIFUZZ_NEW_INPUT, payload, self.comm.to_concolicserver_queue)
         else:
             self.shadow_map.add(new_hash)
         return accepted
@@ -279,7 +280,7 @@ class MapserverProcess:
             return True
         return False
 
-    def __result_tag_handler(self, request):
+    def __result_tag_handler(self, request, imported=False):
         # self.comm.slave_locks_B[request.source].acquire()
         results = request.data
         payloads = []
@@ -311,7 +312,8 @@ class MapserverProcess:
         self.comm.slave_locks_bitmap[request.source].release()
         for i in range(len(results)):
             if results[i].reloaded:
-                self.abortion_counter += 1
+                if not imported:
+                    self.abortion_counter += 1
 
             if results[i].new_bits:
                 if results[i].timeout:
@@ -320,14 +322,18 @@ class MapserverProcess:
                 self.__check_hash(new_hash, bitmaps[i], payloads[i], results[i].crash, results[i].timeout, results[i].kasan, results[i].slave_id, results[i].reloaded, results[i].performance, results[i].qid, results[i].pos)
                 
                 self.last_hash = new_hash
-                self.round_counter += 1
+                if not imported:
+                    self.round_counter += 1
                 if self.effector_initial_bitmap:
                     if self.effector_initial_bitmap != new_hash:
                         for j in results[i].affected_bytes:
                             if not self.effector_map[j]:
                                 self.effector_map[j] = True
             else:
-                self.round_counter += 1
+                if not imported:
+                    self.round_counter += 1
+        if imported:
+            return
         # TODO: Replace const value by performance*(1/50)s
         if self.abortion_counter >= self.abortion_threshold:
             if not self.abortion_alredy_sent:
@@ -391,12 +397,18 @@ class MapserverProcess:
                 self.round_counter = 0
 
     def loop(self):
+        skip_sync=False
         while True:
-            self.__sync_handler()
+            if not skip_sync:
+                self.__sync_handler()
+            skip_sync = False
             request = recv_msg(self.comm.to_mapserver_queue)
 
             if request.tag == KAFL_TAG_RESULT:
                 self.__result_tag_handler(request)
+            elif request.tag == DRIFUZZ_CONC_BITMAP:
+                self.skip_sync = True
+                self.__result_tag_handler(request, imported=True)
             elif request.tag == KAFL_TAG_MAP_INFO:
                 self.__map_info_tag_handler(request)
             elif request.tag == KAFL_TAG_NXT_FIN or request.tag == KAFL_TAG_NXT_UNFIN:

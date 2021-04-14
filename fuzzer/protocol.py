@@ -48,3 +48,6 @@ KAFL_TAG_REQ_BENCHMARK =    14 # slave -> master
 KAFL_TAG_ABORT_REQ =        15 # mapserver -> masater  stage abort
 DRIFUZZ_REQ_READ_IDX =      16
 DRIFUZZ_REQ_DMA_IDX =       17
+DRIFUZZ_NEW_FINDING =       18 # mapserver -> concolicserver
+DRIFUZZ_NEW_INPUT =         19 # concolicserver -> master
+DRIFUZZ_CONC_BITMAP =       20 # master -> slave

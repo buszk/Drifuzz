@@ -20,6 +20,7 @@ class SlaveState(IntEnum):
     PROC_BITMAP = 1
     PROC_TASK = 2
     WAITING = 3
+    PROC_IMPORT = 4
 
 class SlaveThread(threading.Thread):
     comm: Communicator = None
@@ -83,6 +84,7 @@ class SlaveThread(threading.Thread):
 
         # Consume the idx_sem if it is released
         self.idx_sem.acquire(blocking=False)
+        self.unlock_concolic_thread()
 
         while True:
             self.q.__del__()
@@ -108,7 +110,7 @@ class SlaveThread(threading.Thread):
             self.payload_sem.release()
         return True
 
-    def __respond_job_req(self, response):
+    def __respond_job_req(self, response, imported=False):
         # if self.state != SlaveState.WAITING:
         #     print("Error: slave is not waiting for input")
         #     return
@@ -120,7 +122,10 @@ class SlaveThread(threading.Thread):
         self.payload = shm_fs.read(payload_len) 
         # print(self.state)
         assert(self.state == SlaveState.WAITING)
-        self.state = SlaveState.PROC_TASK
+        if imported:
+            self.state = SlaveState.PROC_IMPORT
+        else:
+            self.state = SlaveState.PROC_TASK
         log_slave(f"release payload in __respond_job_req", self.slave_id)
         self.payload_sem.release()
         # Todo one payload each time?
@@ -166,9 +171,23 @@ class SlaveThread(threading.Thread):
             
         log_slave('bitmap covers %d bytes; global bitmap covers %d bytes' % (result, global_cnt), self.slave_id)
 
+    def lock_concolic_thread(self):
+        if self.slave_id == 0:
+            while not self.stopped():
+                if self.comm.concolic_lock.acquire(timeout=0.1):
+                    break
+            log_slave("concolic locked", 0)
+
+    def unlock_concolic_thread(self):
+        if self.slave_id == 0:
+            self.comm.concolic_lock.release()
+            log_slave("concolic unlocked", 0)
+
     def send_bitmap(self, perf = 10, kasan = False, timeout = False, payload = None):
         if self.exit_if_reproduce():
             return
+        log_slave(f"Execution time: {time.time()-self.start_time}", self.slave_id)
+        self.unlock_concolic_thread()
 
         if self.state == SlaveState.PROC_BITMAP:
             bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
@@ -181,7 +200,9 @@ class SlaveThread(threading.Thread):
             # if not self.requested_input:
             #     self.requested_input = True
             #     send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
-        elif self.state == SlaveState.PROC_TASK:
+        elif self.state == SlaveState.PROC_TASK or \
+            self.state == SlaveState.PROC_IMPORT:
+
             bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
             bitmap_shm.seek(0)
             bitmap = bitmap_shm.read(self.bitmap_size)
@@ -198,7 +219,8 @@ class SlaveThread(threading.Thread):
             result = FuzzingResult(0, False, timeout, kasan, self.affected_bytes[0],
                     self.slave_id, perf, reloaded=False, new_bits=hnb, qid=self.slave_id)
             # Notify mapserver the result
-            send_msg(KAFL_TAG_RESULT, [result], self.comm.to_mapserver_queue, source=self.slave_id)
+            tag = KAFL_TAG_RESULT if self.state == SlaveState.PROC_TASK else DRIFUZZ_CONC_BITMAP
+            send_msg(tag, [result], self.comm.to_mapserver_queue, source=self.slave_id)
             # Wait for mapserver to finish
             self.comm.slave_locks_bitmap[self.slave_id].acquire()
             # Ask master for new payloads
@@ -206,7 +228,6 @@ class SlaveThread(threading.Thread):
         else:
             log_slave("Error: slave thread in wrong state", self.slave_id)
         self.state = SlaveState.WAITING
-        log_slave(f"Execution time: {time.time()-self.start_time}", self.slave_id)
 
     def fetch_payload(self):
         if self.stopped():
@@ -219,6 +240,8 @@ class SlaveThread(threading.Thread):
         if self.reproduce and self.reproduce != "":
             with open(self.reproduce, 'rb') as infile:
                 return infile.read()
+
+        self.lock_concolic_thread()
         while not self.stopped():
             if self.payload_sem.acquire(timeout=0.1):
                 break
@@ -268,10 +291,15 @@ class SlaveThread(threading.Thread):
         response = recv_msg(self.comm.to_slave_queues[self.slave_id], timeout=0.1)
         if response is None:
             return
+        if self.stopped():
+            return
         # print('slave got cmd %d' % response.tag)
 
         if response.tag == KAFL_TAG_JOB:
             self.__respond_job_req(response)
+
+        elif response.tag == DRIFUZZ_CONC_BITMAP:
+            self.__respond_job_req(response, imported=True)
 
         elif response.tag == KAFL_TAG_REQ_BITMAP:
             self.__respond_bitmap_req(response)

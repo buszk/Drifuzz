@@ -115,5 +115,8 @@ def log_info(msg):
 def log_modelserver(msg):
     logger("[MODELSERV]     " + msg)
 
+def log_concolicserver(msg):
+    logger("[CONCSERV]      " + msg)
+
 
 

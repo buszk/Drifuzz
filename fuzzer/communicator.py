@@ -119,7 +119,7 @@ class Communicator:
     models: [Model] = []
     socks: [SocketThread] = []
 
-    def __init__(self, num_processes=1):
+    def __init__(self, num_processes=1, concolic_thread=False):
         self.num_processes = num_processes
         self.files = ["/dev/shm/drifuzz_master_", "/dev/shm/drifuzz_mapserver_", "/dev/shm/drifuzz_bitmap_"]
         self.sizes = [(100 << 10), (100 << 10), bitmap_size]
@@ -132,6 +132,7 @@ class Communicator:
         self.to_master_from_mapserver_queue = multiprocessing.Queue()
         self.to_master_from_slave_queue = multiprocessing.Queue()
         self.to_mapserver_queue = multiprocessing.Queue()
+        self.to_concolicserver_queue = multiprocessing.Queue()
 
         # Call cancel_join_thread to ensure processes can exit properly
         #   when received SIGINT
@@ -141,12 +142,15 @@ class Communicator:
         self.to_master_from_slave_queue.cancel_join_thread()
         self.to_mapserver_queue.cancel_join_thread()
         self.to_modelserver_queue.cancel_join_thread()
+        self.to_concolicserver_queue.cancel_join_thread()
 
         self.to_slave_queues = []
         for i in range(num_processes):
             self.to_slave_queues.append(multiprocessing.Queue())
             self.to_slave_queues[i].cancel_join_thread()
             self.socks.append(SocketThread(qemu_socket_prefix + str(i)))
+        if concolic_thread:
+            self.socks.append(SocketThread(qemu_socket_prefix + str(num_processes)))
 
         self.slave_locks_bitmap = []
         self.slave_locks_A = []
@@ -156,6 +160,7 @@ class Communicator:
             self.slave_locks_A.append(multiprocessing.Lock())
             self.slave_locks_B.append(multiprocessing.Lock())
             self.slave_locks_B[i].acquire()
+        self.concolic_lock = multiprocessing.Lock()
 
         self.stage_abortion_notifier = multiprocessing.Value('b', False)
         self.slave_termination = multiprocessing.Value('b', False, lock=False)
@@ -197,8 +202,6 @@ class Communicator:
             shm = mmap.mmap(shm_fd, self.sizes[type_id]*self.tasks_per_requests, mmap.MAP_SHARED, mmap.PROT_WRITE | mmap.PROT_READ)
             self.tmp_shm[type_id][slave_id] = shm
         return shm
-
-           
 
     def register_model(self, id, model:Model):
         self.socks[id].register_model(model)

@@ -16,11 +16,10 @@ class Model(object):
 
     log_file = None
 
-    def __init__(self, slave,
+    def __init__(self, parent,
                     use_model=True, global_model=True):
-        self.slave = slave
+        self.slave = parent
         self.log_file = open('rw.log', 'w')
-        self.module_id = self.slave.slave_id
         self.next_free_idx = 0
         # count data access for this run
         self.read_cnt:dict = {}
