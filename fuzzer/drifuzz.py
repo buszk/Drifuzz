@@ -107,6 +107,7 @@ def main():
         # Properly stop threads
         for slave in slaves:
             slave.stop()
+        time.sleep(1)
         # Stop communicator last because Queues may be in used
         comm.stop()
         master.save_data()

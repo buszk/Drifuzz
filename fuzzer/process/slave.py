@@ -219,8 +219,9 @@ class SlaveThread(threading.Thread):
         if self.reproduce and self.reproduce != "":
             with open(self.reproduce, 'rb') as infile:
                 return infile.read()
-        
-        self.payload_sem.acquire()
+        while not self.stopped():
+            if self.payload_sem.acquire(timeout=0.1):
+                break
         payload = self.payload
         # print(len(payload))
         assert(self.state != SlaveState.WAITING)
