@@ -87,7 +87,7 @@ def log_update(msg):
 def log_slave(msg, qid):
     if qid < 10:
         logger("[SLAVE " + str(qid) + "]       " + msg)
-    elif qid > 10 and qid < 100:
+    elif qid >= 10 and qid < 100:
         logger("[SLAVE " + str(qid) + "]      " + msg)
     else:
         logger("[SLAVE " + str(qid) + "]     " + msg)
