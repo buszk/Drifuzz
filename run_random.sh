@@ -6,8 +6,8 @@ if [ $# != 1 ];then
 fi
 
 target=$1
-work=work-$target-random
-seed=seed-random
+work=work/work-$target-random
+seed=seed/seed-random
 
 echo "target: $target"
 echo "work directory: $work"

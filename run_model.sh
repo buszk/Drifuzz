@@ -6,8 +6,8 @@ if [ $# != 1 ];then
 fi
 
 target=$1
-work=work-$target-model
-seed=seed-$target
+work=work/work-$target-model
+seed=seed/seed-$target
 
 echo "target: $target"
 echo "work directory: $work"
