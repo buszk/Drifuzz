@@ -17,7 +17,7 @@ class Model(object):
     log_file = None
 
     def __init__(self, parent,
-                    use_model=True, global_model=True):
+                    global_model=True):
         self.slave = parent
         self.log_file = open('rw.log', 'w')
         self.next_free_idx = 0
@@ -27,7 +27,6 @@ class Model(object):
         self.read_idx:dict = {}
         self.dma_cnt:dict = {}
         self.dma_idx:dict = {}
-        self.use_model = use_model
         self.use_global_model = global_model
 
     def __del__(self):
@@ -46,23 +45,18 @@ class Model(object):
     def get_read_data(self, key, size):
         if self.payload is None:
             return 0
-        if self.use_model:
-            ret = self.bytes_to_int(self.get_read_data_by_model(key, size))
-        else:
-            ret = self.bytes_to_int(self.get_data_by_size(size))
-        return ret
+        bs, idx = self.get_read_data_by_model(key, size)
+        ret = self.bytes_to_int(bs)
+        return ret, idx
 
     def get_dma_data(self, size):
         if not self.payload:
             return b'A'*size
-        if self.use_model:
-            k = (size)
-            ret = self.get_dma_data_by_model(k, size)
-        else:
-            ret = self.get_data_by_size(size)
-        return ret
+        k = (size)
+        ret, idx = self.get_dma_data_by_model(k, size)
+        return ret, idx
     
-    def get_data_by_size(self, size, ind = None):
+    def get_data_by_size(self, size, ind):
         '''
         ### use byte '0xaa' if index out of payload size
         res = b''
@@ -75,10 +69,8 @@ class Model(object):
             res += self.payload[ind:ind+size]
         return res
         '''
-        if ind:
-            ii = ind % self.payload_len
-        else:
-            ii = self.next_free_idx % self.payload_len
+        assert ind != None
+        ii = ind % self.payload_len
         res = b''
         while ii + size >self.payload_len:
             res += self.payload[ii:self.payload_len]
@@ -107,17 +99,17 @@ class Model(object):
             v = self.read_idx[k]
             if len(v) > n:
                 idx = self.read_idx[k][n]
-                ret = self.get_data_by_size(size, ind=idx)
+                ret = self.get_data_by_size(size, idx)
             else:
                 idx = self.slave.req_read_idx(k, size, n)
                 self.read_idx[k].append(idx)
-                ret = self.get_data_by_size(size, ind=idx)
+                ret = self.get_data_by_size(size, idx)
         else:
             idx = self.slave.req_read_idx(k, size, n)
             self.read_idx[k] = [idx]
-            ret = self.get_data_by_size(size, ind=idx)
+            ret = self.get_data_by_size(size, idx)
         self.log_file.write("[%.4f] idx %x n %d :%d %d %d\n" % (time.time(), idx, n, k[0], k[1], k[2]))
-        return ret
+        return ret, idx
     
     def get_dma_data_by_model(self, k, size, reuse=True):
         n = 0
@@ -131,19 +123,19 @@ class Model(object):
             v = self.dma_idx[k]
             if reuse:
                 idx = self.dma_idx[k][0]
-                ret = self.get_data_by_size(size, ind=idx)
+                ret = self.get_data_by_size(size, idx)
             elif len(v) > n:
                 idx = self.dma_idx[k][n]
-                ret = self.get_data_by_size(size, ind=idx)
+                ret = self.get_data_by_size(size, idx)
             else:
                 idx = self.slave.req_dma_idx(k, size, n)
                 self.dma_idx[k].append(idx)
-                ret = self.get_data_by_size(size, ind=idx)
+                ret = self.get_data_by_size(size, idx)
         else:
             idx = self.slave.req_dma_idx(k, size, n)
             self.dma_idx[k] = [idx]
-            ret = self.get_data_by_size(size, ind=idx)
-        return ret
+            ret = self.get_data_by_size(size, idx)
+        return ret, idx
     
     def handle(self, type:str, *args):
         return getattr(self, f"handle_"+type)(*args)
@@ -153,18 +145,15 @@ class Model(object):
         self.log_file.write("[%.4f] write #%d[%lx][%d] =  %x\n" % (time.time(), region, addr, size, val))
 
     def handle_read(self, region, addr, size):
-        ind = self.next_free_idx
         k = (region, addr, size)
-        ret = self.get_read_data(k, size)
+        ret, idx = self.get_read_data(k, size)
         self.log_file.write("[%.4f] read  #%d[%lx][%d] as %x\n" % (time.time(), region, addr, size, ret))
-        return (ret, ind,)
+        return (ret, idx,)
     
     def handle_dma_buf(self, size):
-        ret = self.get_dma_data(size)
+        ret, idx = self.get_dma_data(size)
         self.log_file.write("[%.4f] dma_buf [%x]\n" % (time.time(), size))
-        # Pass an empty index 0 here
-        # No need to care during fuzzing
-        return (ret, 0)
+        return (ret, idx)
 
     def handle_reset(self):
         # TODO Check coverage
