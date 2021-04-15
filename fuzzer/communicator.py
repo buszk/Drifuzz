@@ -13,7 +13,6 @@ from common.debug import log_slave
 
 
 
-qemu_socket_prefix = '/tmp/zekun_drifuzz_socket_'
 bitmap_size = 65536
 
 class SocketThread (threading.Thread):
@@ -118,7 +117,8 @@ class SocketThread (threading.Thread):
 class Communicator:
     models: [Model] = []
     socks: [SocketThread] = []
-
+    qemu_socket_prefix = '/tmp/zekun_drifuzz_socket_'
+    
     def __init__(self, num_processes=1, concolic_thread=False):
         self.num_processes = num_processes
         self.files = ["/dev/shm/drifuzz_master_", "/dev/shm/drifuzz_mapserver_", "/dev/shm/drifuzz_bitmap_"]
@@ -148,9 +148,9 @@ class Communicator:
         for i in range(num_processes):
             self.to_slave_queues.append(multiprocessing.Queue())
             self.to_slave_queues[i].cancel_join_thread()
-            self.socks.append(SocketThread(qemu_socket_prefix + str(i)))
+            self.socks.append(SocketThread(self.qemu_socket_prefix + str(i)))
         if concolic_thread:
-            self.socks.append(SocketThread(qemu_socket_prefix + str(num_processes)))
+            self.socks.append(SocketThread(self.qemu_socket_prefix + str(num_processes)))
 
         self.slave_locks_bitmap = []
         self.slave_locks_A = []
