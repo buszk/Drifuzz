@@ -37,6 +37,7 @@ enum ACTIONS {
 	KASAN,
 	REQ_RESET,
 	EXEC_TIMEOUT,
+	PROBE_FAIL,
 };
 
 struct qemu_adapter {
@@ -149,6 +150,15 @@ void handle_req_reset(void) {
 		writeq(ACT, adapter->hw_addr);
 	}
 }
+
+void probe_fail(void) {
+	printk(KERN_INFO "probe_fail\n");
+	if (adapter) {
+        writeq(PROBE_FAIL, adapter->hw_addr + CMD_ADDR);
+		writeq(ACT, adapter->hw_addr);
+	}
+}
+EXPORT_SYMBOL(probe_fail);
 
 static int handle_command(void* buffer, size_t len) {
 	uint64_t *pbuffer;

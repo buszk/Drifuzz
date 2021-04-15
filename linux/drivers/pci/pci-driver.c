@@ -410,6 +410,7 @@ static inline bool pci_device_can_probe(struct pci_dev *pdev)
 }
 #endif
 
+void probe_fail(void);
 static int pci_device_probe(struct device *dev)
 {
 	int error;
@@ -430,6 +431,7 @@ static int pci_device_probe(struct device *dev)
 	if (error) {
 		pcibios_free_irq(pci_dev);
 		pci_dev_put(pci_dev);
+		probe_fail();
 	}
 
 	return error;
