@@ -63,6 +63,8 @@ class Model(object):
         return ret
     
     def get_data_by_size(self, size, ind = None):
+        '''
+        ### use byte '0xaa' if index out of payload size
         res = b''
         if ind >= self.payload_len:
             res = b'\xaa' * size
@@ -72,26 +74,26 @@ class Model(object):
         else:
             res += self.payload[ind:ind+size]
         return res
-
-        # if ind:
-        #     ii = ind % self.payload_len
-        # else:
-        #     ii = self.next_free_idx % self.payload_len
-        # res = b''
-        # # while ii + size >self.payload_len:
-        # #     res += self.payload[ii:self.payload_len]
-        # #     size -= (self.payload_len - ii)
-        # #     ii = 0
-        # # res += self.payload[ii:ii+size]
+        '''
+        if ind:
+            ii = ind % self.payload_len
+        else:
+            ii = self.next_free_idx % self.payload_len
+        res = b''
+        while ii + size >self.payload_len:
+            res += self.payload[ii:self.payload_len]
+            size -= (self.payload_len - ii)
+            ii = 0
+        res += self.payload[ii:ii+size]
         # if ii + size >self.payload_len:
         #     res += self.payload[ii:self.payload_len]
         #     res += b'\xaa' * (ii + size - self.payload_len)
         # else:
         #     res += self.payload[ii:ii+size]
-        # if not ind:
-        #     self.next_free_idx += size
-        # # print(size, res)
-        # return res
+        if not ind:
+            self.next_free_idx += size
+        # print(size, res)
+        return res
 
     def get_read_data_by_model(self, k, size):
         n = 0
