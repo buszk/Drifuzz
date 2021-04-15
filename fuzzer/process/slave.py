@@ -180,6 +180,7 @@ class SlaveThread(threading.Thread):
 
     def unlock_concolic_thread(self):
         if self.slave_id == 0:
+            self.comm.concolic_lock.acquire(block=False)
             self.comm.concolic_lock.release()
             log_slave("concolic unlocked", 0)
 
