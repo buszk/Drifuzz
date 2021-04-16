@@ -9,6 +9,8 @@ target=$1
 work=work/work-$target-conc
 seed=seed/seed-random
 
+rm -rf tmp_conc_*
+
 echo "target: $target"
 echo "work directory: $work"
 echo "seed directory: $seed"
