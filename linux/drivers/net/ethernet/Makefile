@@ -2,6 +2,8 @@
 #
 # Makefile for the Linux network Ethernet device drivers.
 #
+KCOV_INSTRUMENT := y
+ccflags-y += -fno-reorder-functions
 
 obj-$(CONFIG_NET_VENDOR_3COM) += 3com/
 obj-$(CONFIG_NET_VENDOR_8390) += 8390/
