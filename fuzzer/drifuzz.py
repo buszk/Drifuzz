@@ -75,8 +75,7 @@ def main():
     master = MasterProcess(comm, reload=reload)
     mapserver_process = multiprocessing.Process(name='MAPSERVER', target=mapserver_loader, args=(comm,reload))
     modelserver_process = multiprocessing.Process(name='MODELSERVER', target=modelserver_loader, args=(comm,))
-    if DO_USE_UI:
-        update_process = multiprocessing.Process(name='UPDATE', target=update_loader, args=(comm,))
+    update_process = multiprocessing.Process(name='UPDATE', target=update_loader, args=(comm, DO_USE_UI))
 
     slaves = []
     for i in range(num_processes):
@@ -88,9 +87,8 @@ def main():
     comm.start()
     comm.create_shm()
 
-    if DO_USE_UI:
-        update_process.start()
-        time.sleep(.1)
+    update_process.start()
+    time.sleep(.1)
 
     mapserver_process.start()
     modelserver_process.start()
@@ -106,8 +104,7 @@ def main():
         print('Saving data')
         # Wait for child processes to properly exit
         mapserver_process.join()
-        if DO_USE_UI:
-            update_process.join()
+        update_process.join()
         
         # Properly stop threads
         for slave in slaves:

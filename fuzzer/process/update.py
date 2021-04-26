@@ -30,19 +30,20 @@ from common.evaluation import Evaluation
 __author__ = 'Sergej Schumilo'
 
 
-def update_loader(comm):
+def update_loader(comm, use_ui):
     log_update("PID: " + str(os.getpid()))
-    slave_process = UpdateProcess(comm)
+    slave_process = UpdateProcess(comm, use_ui)
     try:
         slave_process.loop()
     except KeyboardInterrupt:
         log_update("Exiting...")
 
 class UpdateProcess:
-    def __init__(self, comm):
+    def __init__(self, comm, use_ui):
         self.comm = comm
         self.config = FuzzerConfiguration()
         self.timeout = self.config.config_values['UI_REFRESH_RATE']
+        self.use_ui = use_ui
 
 
     # def blacklist_updater(self, ui):
@@ -75,20 +76,27 @@ class UpdateProcess:
     def __update_ui(self, ui, ev, update, msg):
         if msg:
             update = msg.data
-            ui.update_state(update)
-            ev.write_data(update, ui.blacklist_counter)
+            if self.use_ui:
+                ui.update_state(update)
+            ev.write_data(update, 0)
         elif update:
             update.performance_rb.append(0)
-            ui.update_state(update)
-            ev.write_data(update, ui.blacklist_counter)
-        ui.refresh()
+            if self.use_ui:
+                ui.update_state(update)
+            ev.write_data(update, 0)
+        if self.use_ui:
+            ui.refresh()
 
 
     def loop(self):
         # ui = FuzzerUI(self.comm.num_processes, fancy=self.config.argument_values['f'], inline_log=self.config.argument_values['l'])
-        ui = FuzzerUI(self.comm.num_processes, fancy=True, inline_log=True)
+        if self.use_ui:
+            ui = FuzzerUI(self.comm.num_processes, fancy=True, inline_log=True)
+        else:
+            ui = None
         ev = Evaluation(self.config)
-        ui.install_sighandler()
+        if self.use_ui:
+            ui.install_sighandler()
         # Thread(target=self.blacklist_updater, args=(ui,)).start()
         update = None
         while True:
