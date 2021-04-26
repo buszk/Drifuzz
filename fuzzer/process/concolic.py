@@ -9,10 +9,10 @@ from common.debug import log_concolicserver
 from common.config import FuzzerConfiguration
 from protocol import *
 import shutil
-from os.path import dirname, realpath
+from os.path import dirname, realpath, join
 
 class ConcolciWorker(threading.Thread):
-    def __init__(self, comm, target, payload, model, slave_id, log):
+    def __init__(self, comm, target, payload, model, slave_id, log, work_dir):
         threading.Thread.__init__(self)
         self.comm = comm
         self.model = model
@@ -21,6 +21,7 @@ class ConcolciWorker(threading.Thread):
         self._stop_event = threading.Event()
         self.log = log
         self.payload = payload
+        self.work_dir = work_dir
 
     def run(self):
         while not self.stopped():
@@ -31,8 +32,8 @@ class ConcolciWorker(threading.Thread):
         self.model.read_cnt = {}
         self.model.dma_cnt = {}
         log_concolicserver("concolic locked")
-        fname = 'tmp_conc_payload'
-        outdir = 'tmp_conc_out'
+        fname = join(self.work_dir, 'tmp_conc_payload')
+        outdir = join(self.work_dir, 'tmp_conc_out')
         drifuzz_path = dirname(dirname(dirname(realpath(__file__))))
         
         # Preparation
@@ -53,7 +54,7 @@ class ConcolciWorker(threading.Thread):
                             stdin=None,
                             stdout=self.log,
                             stderr=self.log)
-        total_timeout = 120
+        total_timeout = 500
         while not self.stopped():
             try:
                 p.wait(timeout=1)
@@ -104,11 +105,12 @@ class ConcolicThread(threading.Thread):
         self.slave_id = nproc
         self.target = self.config.argument_values['target']
         self.workers = []
-        self.log = open('tmp_conc_log', 'w')
+        self.work_dir = self.config.argument_values['work_dir']
+        self.log = open(join(self.work_dir, 'tmp_conc_log'), 'w')
 
     def run_concolic(self, payload):
         worker_thread = ConcolciWorker(
-            self.comm, self.target, payload, self.model, self.slave_id, self.log)
+            self.comm, self.target, payload, self.model, self.slave_id, self.log, self.work_dir)
         self.workers.append(worker_thread)
         worker_thread.start()
 

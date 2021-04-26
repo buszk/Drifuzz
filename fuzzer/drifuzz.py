@@ -47,6 +47,7 @@ def main():
 
     config = FuzzerConfiguration()
     num_processes = config.argument_values['p']
+    use_concolic = config.argument_values['concolic']
     reload = False
 
     if config.argument_values['Purge'] and check_if_old_state_exits(config.argument_values['work_dir']):
@@ -68,8 +69,9 @@ def main():
         config.load_data()
         reload = True
 
-    DO_USE_UI = (USE_UI and not config.argument_values['verbose'])
-    comm = Communicator(num_processes = num_processes, concolic_thread=True)
+    DO_USE_UI = (USE_UI and not config.argument_values['verbose'] and
+                config.argument_values['f'])
+    comm = Communicator(num_processes = num_processes, concolic_thread=use_concolic)
     master = MasterProcess(comm, reload=reload)
     mapserver_process = multiprocessing.Process(name='MAPSERVER', target=mapserver_loader, args=(comm,reload))
     modelserver_process = multiprocessing.Process(name='MODELSERVER', target=modelserver_loader, args=(comm,))
@@ -80,7 +82,7 @@ def main():
     for i in range(num_processes):
         slave = SlaveThread(comm, i, reload=reload)
         slaves.append(slave)
-    if config.argument_values['concolic']:
+    if use_concolic:
         slaves.append(ConcolicThread(comm, num_processes))
 
     comm.start()
