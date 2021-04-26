@@ -180,6 +180,7 @@ class SlaveThread(threading.Thread):
 
     def unlock_concolic_thread(self):
         if self.slave_id == 0:
+            # Fool-proof unlock
             self.comm.concolic_lock.acquire(block=False)
             self.comm.concolic_lock.release()
             log_slave("concolic unlocked", 0)
@@ -191,6 +192,7 @@ class SlaveThread(threading.Thread):
         self.unlock_concolic_thread()
 
         if self.state == SlaveState.PROC_BITMAP:
+            self.state = SlaveState.WAITING
             bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
             bitmap_shm.seek(0)
             bitmap = bitmap_shm.read(self.bitmap_size)
@@ -203,7 +205,8 @@ class SlaveThread(threading.Thread):
             #     send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
         elif self.state == SlaveState.PROC_TASK or \
             self.state == SlaveState.PROC_IMPORT:
-
+            tag = KAFL_TAG_RESULT if self.state == SlaveState.PROC_TASK else DRIFUZZ_CONC_BITMAP
+            self.state = SlaveState.WAITING
             bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
             bitmap_shm.seek(0)
             bitmap = bitmap_shm.read(self.bitmap_size)
@@ -220,15 +223,17 @@ class SlaveThread(threading.Thread):
             result = FuzzingResult(0, False, timeout, kasan, self.affected_bytes[0],
                     self.slave_id, perf, reloaded=False, new_bits=hnb, qid=self.slave_id)
             # Notify mapserver the result
-            tag = KAFL_TAG_RESULT if self.state == SlaveState.PROC_TASK else DRIFUZZ_CONC_BITMAP
             send_msg(tag, [result], self.comm.to_mapserver_queue, source=self.slave_id)
             # Wait for mapserver to finish
             self.comm.slave_locks_bitmap[self.slave_id].acquire()
+            # Acquire concolic lock before asking master for payload
+            # Prevent master from sending out a payload that is never processed,
+            # May cause starvation because concolic thread is busy
+            self.lock_concolic_thread()
             # Ask master for new payloads
             send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
         else:
             log_slave("Error: slave thread in wrong state", self.slave_id)
-        self.state = SlaveState.WAITING
 
     def fetch_payload(self):
         if self.stopped():
@@ -242,7 +247,6 @@ class SlaveThread(threading.Thread):
             with open(self.reproduce, 'rb') as infile:
                 return infile.read()
 
-        self.lock_concolic_thread()
         while not self.stopped():
             if self.payload_sem.acquire(timeout=0.1):
                 break
