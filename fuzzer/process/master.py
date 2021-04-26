@@ -84,14 +84,17 @@ class MasterProcess:
             self.load_old_state = True
             self.load_data()
 
+        self._stop_event = threading.Event()
         # log_master("Use effector maps: " + str(self.use_effector_map))
 
     def __recv_tagged_msg(self, queue, tag):
         tmp_obj = None
 
-        while True:
-            tmp_obj = recv_msg(queue)
-            if tmp_obj.tag == tag:
+        while not self.stopped():
+            tmp_obj = recv_msg(queue, timeout=0.1)
+            if tmp_obj == None:
+                continue
+            elif tmp_obj.tag == tag:
                 return tmp_obj
             else:
                 queue.put(tmp_obj)
@@ -199,8 +202,10 @@ class MasterProcess:
             self.start = time.time()
             self.counter = 0
 
-        while True:
-            msg = recv_msg(self.comm.to_master_queue)
+        while not self.stopped():
+            msg = recv_msg(self.comm.to_master_queue, timeout=0.1)
+            if msg == None:
+                continue
             if msg.tag == KAFL_TAG_REQ:
                 if len(self.concolic_payloads) > 0:
                     self.__task_send([self.concolic_payloads[0]], msg.data, self.comm.to_slave_queues[int(msg.data)], imported=True)
@@ -231,7 +236,10 @@ class MasterProcess:
             send_msg(KAFL_TAG_UNTOUCHED_NODES, self.abortion_counter, self.comm.to_mapserver_queue)
         else:
             send_msg(KAFL_TAG_UNTOUCHED_NODES, self.round_counter, self.comm.to_mapserver_queue)
-        result = recv_msg(self.comm.to_master_from_mapserver_queue).data
+        msg = None
+        while not msg and not self.stopped():
+            msg = recv_msg(self.comm.to_master_from_mapserver_queue, timeout=0.1)
+        result = msg.data
         log_master("Current findings: " + str(result))
         return result
 
@@ -240,7 +248,9 @@ class MasterProcess:
             send_msg(KAFL_TAG_NXT_FIN, [self.round_counter, performance], self.comm.to_mapserver_queue)
         else:
             send_msg(KAFL_TAG_NXT_UNFIN, [self.round_counter, performance], self.comm.to_mapserver_queue)
-        msg = recv_msg(self.comm.to_master_from_mapserver_queue)
+        msg = None
+        while not msg and not self.stopped():
+            msg = recv_msg(self.comm.to_master_from_mapserver_queue, timeout=0.1)
         payload = msg.data
         if msg.tag == KAFL_TAG_NXT_FIN:
             return payload, False
@@ -279,7 +289,9 @@ class MasterProcess:
 
     def __get_effector_map(self, bitflip_amount):
         send_msg(KAFL_TAG_GET_EFFECTOR, bitflip_amount, self.comm.to_mapserver_queue)
-        msg = recv_msg(self.comm.to_master_from_mapserver_queue)
+        msg = None
+        while not msg and not self.stopped():
+            msg = recv_msg(self.comm.to_master_from_mapserver_queue, timeout=0.1)
         return msg.data
 
     def __benchmarking(self, payload):
@@ -618,3 +630,10 @@ class MasterProcess:
 
         # copyfile(self.config.argument_values['work_dir'] + "/kafl_filter0", "/dev/shm/kafl_filter0")
 
+
+    def stop(self):
+        self.q.__del__()
+        self._stop_event.set()
+        
+    def stopped(self):
+        return self._stop_event.is_set()

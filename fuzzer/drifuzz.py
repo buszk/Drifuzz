@@ -101,6 +101,7 @@ def main():
     try:
         master.loop()
     except KeyboardInterrupt:
+        master.stop()
         print('Saving data')
         # Wait for child processes to properly exit
         mapserver_process.join()
