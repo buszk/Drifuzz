@@ -54,9 +54,9 @@ class SocketThread (threading.Thread):
             while not self.stopped():
                 try:
                     # lost contact for a minute
-                    if time.time() - last_contact_time > 60:
-                        self.model.slave.restart_vm(reuse=True)
-                        break
+                    # if time.time() - last_contact_time > 60:
+                    #     self.model.slave.restart_vm(reuse=True)
+                    #     break
                     ty: bytearray[8] = connection.recv(8)
                     last_contact_time = time.time()
                     if self.stopped():
