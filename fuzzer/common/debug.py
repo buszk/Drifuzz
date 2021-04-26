@@ -22,6 +22,9 @@ from datetime import timedelta
 import time
 import collections
 from multiprocessing import Manager
+import os
+from os.path import join
+from common.config import FuzzerConfiguration
 
 
 __author__ = 'sergej'
@@ -43,11 +46,24 @@ init_time = 0.0
 
 manager = Manager()
 shared_list = manager.list()
+config = FuzzerConfiguration()
 
 def __init_logger():
     global output_file, init_time
     init_time = time.time()
-    output_file = open("debug.log", 'w')
+    output_fname = join(config.argument_values['work_dir'], 'debug.log')
+    output_file = open(output_fname, 'w')
+    while True:
+        try:
+            if exists("debug.log"):
+                os.remove("debug.log")
+            os.symlink(output_fname, "debug.log")
+        except FileExistsError:
+            continue
+        except FileNotFoundError:
+            continue
+        break
+
 
 def logger(msg):
     global logging_is_enabled, output_file, init_time, shared_list
