@@ -7,6 +7,7 @@ import threading
 import queue
 import mmap
 import time
+import shortuuid
 from model.model import Model
 from cmdparser import opts, Command
 from common.debug import log_slave
@@ -117,11 +118,12 @@ class SocketThread (threading.Thread):
 class Communicator:
     models: [Model] = []
     socks: [SocketThread] = []
-    qemu_socket_prefix = '/tmp/zekun_drifuzz_socket_'
     
     def __init__(self, num_processes=1, concolic_thread=False):
         self.num_processes = num_processes
-        self.files = ["/dev/shm/drifuzz_master_", "/dev/shm/drifuzz_mapserver_", "/dev/shm/drifuzz_bitmap_"]
+        uuid = shortuuid.uuid()
+        self.files = [f"/dev/shm/drifuzz_master_{uuid}_", "/dev/shm/drifuzz_mapserver_{uuid}_", "/dev/shm/drifuzz_bitmap_{uuid}_"]
+        self.qemu_socket_prefix = f'/tmp/drifuzz_socket_{uuid}_'
         self.sizes = [(100 << 10), (100 << 10), bitmap_size]
         self.tmp_shm = [{}, {}, {}]
         self.tasks_per_requests = 1

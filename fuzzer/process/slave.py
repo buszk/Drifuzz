@@ -43,7 +43,7 @@ class SlaveThread(threading.Thread):
         self.comm = comm
         self.slave_id = id
         self.config = FuzzerConfiguration()
-        self.q = qemu(id, config=self.config)
+        self.q = qemu(id, self.comm.files[2], self.comm.qemu_socket_prefix,  config=self.config)
         self.model = Model(self)
         self.comm.register_model(self.slave_id, self.model)
         self.state = SlaveState.WAITING
@@ -53,7 +53,7 @@ class SlaveThread(threading.Thread):
         self.idx_sem.acquire()
         self._stop_event = threading.Event()
         self.bitmap_size = self.config.config_values['BITMAP_SHM_SIZE']
-        self.bitmap_filename = '/dev/shm/drifuzz_bitmap_' + str(self.slave_id)
+        self.bitmap_filename = self.comm.files[2] + str(self.slave_id)
         self.comm.slave_locks_bitmap[self.slave_id].acquire()
     
         self.reproduce = self.config.argument_values['reproduce']
@@ -88,7 +88,7 @@ class SlaveThread(threading.Thread):
 
         while True:
             self.q.__del__()
-            self.q = qemu(self.slave_id, config=self.config)
+            self.q = qemu(self.slave_id, self.comm.files[2], self.comm.qemu_socket_prefix, config=self.config)
             v = False
             g = False
             if self.reproduce and self.reproduce != "":

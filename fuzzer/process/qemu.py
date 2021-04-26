@@ -48,7 +48,7 @@ def to_string_32(value):
 class qemu:
     SC_CLK_TCK = os.sysconf(os.sysconf_names['SC_CLK_TCK'])
 
-    def __init__(self, qid, config=None):
+    def __init__(self, qid, bitmap_prefix, socket_prefix, config=None):
 
         self.global_bitmap = None
 
@@ -59,9 +59,8 @@ class qemu:
         self.qemu_id = str(qid)
 
         self.process = None
-
-        self.bitmap_filename    = "/dev/shm/drifuzz_bitmap_"       + self.qemu_id
-        self.socket_path        = "/tmp/zekun_drifuzz_socket_"        + self.qemu_id
+        self.bitmap_filename = bitmap_prefix + self.qemu_id
+        self.socket_path = socket_prefix + self.qemu_id
         drifuzz_path = dirname(dirname(dirname(os.path.realpath(__file__))))
         target = self.config.argument_values['target']
         self.cmd = [f"{drifuzz_path}/panda-build/x86_64-softmmu/panda-system-x86_64",
