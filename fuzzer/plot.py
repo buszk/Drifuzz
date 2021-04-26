@@ -14,13 +14,12 @@ drifuzz_path = dirname(dirname(abspath(__file__)))
 
 model_data_file = join(drifuzz_path, 'work', 'work-' + args.target + '-model', 'evaluation', 'data.csv')
 random_data_file = join(drifuzz_path, 'work', 'work-' + args.target + '-random', 'evaluation', 'data.csv')
+random_concolic_data_file = join(drifuzz_path, 'work', 'work-' + args.target + '-conc', 'evaluation', 'data.csv')
+model_concolic_data_file = join(drifuzz_path, 'work', 'work-' + args.target + '-conc-model', 'evaluation', 'data.csv')
+
 out_file = args.target + '.pdf'
-if not exists(model_data_file):
-    print(f'File {model_data_file} does not exists')
-    sys.exit(0)
-if not exists(random_data_file):
-    print(f'File {random_data_file} does not exists')
-    sys.exit(0)
+dfs = []
+lgs = []
 titles = [
     'time',
     'performance',
@@ -39,24 +38,39 @@ titles = [
     'blacklisted',
     'byte_covered',
 ]
-df1 = pandas.read_csv(
-                    model_data_file,
-                    sep=';',
-                    names=titles,
-                    index_col=False)
 
-df2 = pandas.read_csv(
-                    random_data_file,
-                    sep=';',
-                    names=titles,
-                    index_col=False)
+data_files = [
+    random_data_file,
+    random_concolic_data_file,
+    model_data_file,
+    model_concolic_data_file,
+]
 
-# print(df['time'])
-# print(df['byte_covered'])
-# print(df.loc[17243])
-ax = df1.plot('time', 'byte_covered', title=args.target)
-ax = df2.plot('time', 'byte_covered', ax=ax)
-ax.legend(['generated seed', 'random seed'])
+settings = [
+    'random seed',
+    'random seed +concolic',
+    'generated seed',
+    'generated seed +concolic',
+]
+
+for i in range(4):
+    if exists(data_files[i]):
+        df = pandas.read_csv(
+                        data_files[i],
+                        sep=';',
+                        names=titles,
+                        index_col=False)
+        df['time'] /= 60
+        dfs.append(df)
+        lgs.append(settings[i])
+
+if len(dfs) == 0:
+    sys.exit(0)
+ax = dfs[0].plot('time', 'byte_covered', title=args.target)
+for df in dfs[1:]:
+    ax = df.plot('time', 'byte_covered', title=args.target, ax=ax)
+
+ax.legend(lgs)
 fig = ax.get_figure()
 fig.savefig(out_file)
 
