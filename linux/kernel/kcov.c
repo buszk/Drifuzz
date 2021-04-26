@@ -219,14 +219,12 @@ void notrace __sanitizer_cov_trace_pc(void)
 	// 	WRITE_ONCE(area[0], pos);
 	// }
 	addr = mix_bits(ip) % size;
-#ifdef EDGE_COV
 	addr = (addr ^ (t->kcov_last >> 1)) % size;
-#endif
 
 	if (likely(area[addr] != 0))
 		area[addr] --;
 	
-	t->kcov_last = ip;
+	t->kcov_last = mix_bits(ip) % size;
 	
 }
 EXPORT_SYMBOL(__sanitizer_cov_trace_pc);

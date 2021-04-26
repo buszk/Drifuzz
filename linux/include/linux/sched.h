@@ -1221,8 +1221,8 @@ struct task_struct {
 	/* Buffer for coverage collection: */
 	void				*kcov_area;
 
-	/* Last visited aread */
-	void                *kcov_last;
+	/* Last visited area hash */
+	unsigned long        kcov_last;
 
 	/* KCOV descriptor wired with this task or NULL: */
 	struct kcov			*kcov;
