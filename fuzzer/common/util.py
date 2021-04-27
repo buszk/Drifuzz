@@ -18,7 +18,6 @@ along with QEMU-PT.  If not, see <http://www.gnu.org/licenses/>.
 """
 
 from shutil import copyfile
-from common.debug import logger
 import sys, tty, termios, time, os
 
 __author__ = 'Sergej Schumilo'
@@ -85,6 +84,7 @@ def prepare_working_dir(directory_path, purge=False):
 
 
 def check_if_old_state_exits(working_directory):
+    from common.debug import logger
 
     if not os.path.exists(working_directory):
         logger("[MISC]\t\tError 1 (workdir does not exist)...")

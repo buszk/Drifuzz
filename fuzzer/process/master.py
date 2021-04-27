@@ -632,7 +632,6 @@ class MasterProcess:
 
 
     def stop(self):
-        self.q.__del__()
         self._stop_event.set()
         
     def stopped(self):

@@ -23,7 +23,7 @@ import time
 import collections
 from multiprocessing import Manager
 import os
-from os.path import join
+from os.path import join, exists
 from common.config import FuzzerConfiguration
 
 
