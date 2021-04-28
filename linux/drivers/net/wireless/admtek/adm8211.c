@@ -88,14 +88,18 @@ static void adm8211_eeprom_register_write(struct eeprom_93cx6 *eeprom)
 	struct adm8211_priv *priv = eeprom->data;
 	u32 reg = 0x4000 | ADM8211_SPR_SRS;
 
-	if (eeprom->reg_data_in)
-		reg |= ADM8211_SPR_SDI;
-	if (eeprom->reg_data_out)
-		reg |= ADM8211_SPR_SDO;
-	if (eeprom->reg_data_clock)
-		reg |= ADM8211_SPR_SCLK;
-	if (eeprom->reg_chip_select)
-		reg |= ADM8211_SPR_SCS;
+	// if (eeprom->reg_data_in)
+	// 	reg |= ADM8211_SPR_SDI;
+	reg |= (eeprom->reg_data_in ? ADM8211_SPR_SDI: 0);
+	// if (eeprom->reg_data_out)
+	// 	reg |= ADM8211_SPR_SDO;
+	reg |= (eeprom->reg_data_out ? ADM8211_SPR_SDO: 0);
+	// if (eeprom->reg_data_clock)
+	// 	reg |= ADM8211_SPR_SCLK;
+	reg |= (eeprom->reg_data_clock? ADM8211_SPR_SCLK: 0);	
+	// if (eeprom->reg_chip_select)
+	// 	reg |= ADM8211_SPR_SCS;
+	reg |= (eeprom->reg_chip_select ? ADM8211_SPR_SCS: 0);
 
 	ADM8211_CSR_WRITE(SPR, reg);
 	ADM8211_CSR_READ(SPR);		/* eeprom_delay */

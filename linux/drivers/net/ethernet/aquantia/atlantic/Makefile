@@ -5,7 +5,8 @@
 # Copyright(c) 2014-2017 aQuantia Corporation.
 #
 ################################################################################
-
+KCOV_INSTRUMENT := y
+ccflags-y += -fno-reorder-functions
 obj-$(CONFIG_AQTION) += atlantic.o
 
 atlantic-objs := aq_main.o \

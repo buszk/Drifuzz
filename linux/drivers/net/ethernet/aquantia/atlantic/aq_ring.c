@@ -336,6 +336,7 @@ int aq_ring_rx_clean(struct aq_ring_s *self,
 			buff_ = buff;
 			do {
 				next_ = buff_->next,
+				printk("self->size=%x, next_=%x", self->size, next_);
 				buff_ = &self->buff_ring[next_];
 				is_rsc_completed =
 					aq_ring_dx_in_range(self->sw_head,

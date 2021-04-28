@@ -1,6 +1,7 @@
 # SPDX-License-Identifier: GPL-2.0
 obj-$(CONFIG_SCSI_SNIC) += snic.o
-
+KCOV_INSTRUMENT := y
+ccflags-y += -fno-reorder-functions
 snic-y := \
 	snic_attrs.o \
 	snic_main.o \
