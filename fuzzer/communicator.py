@@ -46,7 +46,6 @@ class SocketThread (threading.Thread):
             sock.settimeout(0.1)
             try:
                 connection, _ = sock.accept()
-                # print(f"{self.address} {connection.fileno()=}", file=sys.stderr)
                 log_slave("connection established", self.model.slave.slave_id)
             except socket.timeout:
                 continue
@@ -89,16 +88,15 @@ class SocketThread (threading.Thread):
                 except socket.timeout:
                     pass
                 except ConnectionResetError as e:
-                    print(f"{last_command=}", file=sys.stderr)
+                    print(f"last_command={last_command}", file=sys.stderr)
                     print("ConnectionResetError", file=sys.stderr)
                     log_slave("ConnectionResetError", self.model.slave.slave_id)
                     break
                 except OSError as e:
                     log_slave("OSError", self.model.slave.slave_id)
                     print("==========", file=sys.stderr)
-                    print(f"{self.address=}", file=sys.stderr)
-                    print(f"{connection.fileno()=}", file=sys.stderr)
-                    print(f'{last_command=}', file=sys.stderr)
+                    print(f"address={self.address}", file=sys.stderr)
+                    print(f"last_command={last_command}", file=sys.stderr)
                     print(e, file=sys.stderr)
                     raise
 

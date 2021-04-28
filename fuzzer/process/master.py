@@ -272,11 +272,11 @@ class MasterProcess:
             for i in range(len(tasks)):
                 data.append(None)
         if imported:
-            log_master(f"IMPORT task sent to {qid=}")
+            log_master(f"IMPORT task sent to slave {qid}")
             send_msg(DRIFUZZ_CONC_BITMAP, data, dest)
         else:
             send_msg(KAFL_TAG_JOB, data, dest)
-        log_master(f"task sent to {qid=}")
+        log_master(f"task sent to slave {qid}")
 
     def __request_bitmap(self, payload):
         send_msg(KAFL_TAG_REQ_BITMAP, payload, self.comm.to_slave_queues[0])

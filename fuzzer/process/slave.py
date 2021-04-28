@@ -77,7 +77,7 @@ class SlaveThread(threading.Thread):
 
     
     def restart_vm(self, reuse=False):
-        log_slave(f"restarting vm {reuse=}", self.slave_id)
+        log_slave(f"restarting vm reuse={reuse}", self.slave_id)
 
         if not reuse and self.exit_if_reproduce():
             return
