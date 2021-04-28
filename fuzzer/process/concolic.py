@@ -61,7 +61,11 @@ class ConcolciWorker(threading.Thread):
             except subprocess.TimeoutExpired:
                 total_timeout -= 1
                 if total_timeout == 0:
-                    break
+                    # Concolic timedout
+                    p.kill()
+                    log_concolicserver("thread timedout. Killing concolic process")
+                    self.comm.concolic_lock.release()
+                    return
                 continue
             break
         else:
@@ -154,7 +158,7 @@ class ConcolicThread(threading.Thread):
                 msg.tag == DRIFUZZ_REQ_DMA_IDX:
                 key, idx = msg.data
                 self.idx = idx
-                log_concolicserver(f"Received index {self.idx}")
+                # log_concolicserver(f"Received index {self.idx}")
                 self.idx_sem.release()
         self.log.close()
 
