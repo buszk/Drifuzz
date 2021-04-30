@@ -8,5 +8,6 @@ tags
 .gdb_history
 *.txt
 
-work*
-seed*
+work/*
+seed/*
+!seed/seed-random
