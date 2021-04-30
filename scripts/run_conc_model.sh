@@ -31,4 +31,4 @@ mkdir -p $seed
 cp ~/Workspace/git/drifuzz-panda/work/$target/out/0 $seed
 
 # Run fuzzing
-python3 fuzzer/drifuzz.py -f --concolic -D -p 8 $seed $work $target 
+python3 fuzzer/drifuzz.py --concolic -D -p 8 $seed $work $target 
