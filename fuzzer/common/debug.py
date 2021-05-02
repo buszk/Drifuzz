@@ -53,16 +53,16 @@ def __init_logger():
     init_time = time.time()
     output_fname = join(config.argument_values['work_dir'], 'debug.log')
     output_file = open(output_fname, 'w')
-    while True:
-        try:
-            if exists("debug.log"):
-                os.remove("debug.log")
-            os.symlink(output_fname, "debug.log")
-        except FileExistsError:
-            continue
-        except FileNotFoundError:
-            continue
-        break
+    # while True:
+    #     try:
+    #         if exists("debug.log"):
+    #             os.remove("debug.log")
+    #         os.symlink(output_fname, "debug.log")
+    #     except FileExistsError:
+    #         continue
+    #     except FileNotFoundError:
+    #         continue
+    #     break
 
 
 def logger(msg):
