@@ -120,7 +120,7 @@ class Communicator:
     def __init__(self, num_processes=1, concolic_thread=False):
         self.num_processes = num_processes
         uuid = shortuuid.uuid()
-        self.files = [f"/dev/shm/drifuzz_master_{uuid}_", "/dev/shm/drifuzz_mapserver_{uuid}_", "/dev/shm/drifuzz_bitmap_{uuid}_"]
+        self.files = [f"/dev/shm/drifuzz_master_{uuid}_", f"/dev/shm/drifuzz_mapserver_{uuid}_", f"/dev/shm/drifuzz_bitmap_{uuid}_"]
         self.qemu_socket_prefix = f'/tmp/drifuzz_socket_{uuid}_'
         self.sizes = [(100 << 10), (100 << 10), bitmap_size]
         self.tmp_shm = [{}, {}, {}]
