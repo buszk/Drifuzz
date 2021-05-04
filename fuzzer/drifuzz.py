@@ -9,7 +9,7 @@ import multiprocessing
 from communicator import Communicator
 from process.master import MasterProcess
 from process.slave import SlaveThread
-from process.concolic import ConcolicThread
+from process.concolic import ConcolicServerThread, ConcolicController
 from process.mapserver import mapserver_loader
 from process.modelserver import modelserver_loader
 from process.update import update_loader
@@ -47,7 +47,7 @@ def main():
 
     config = FuzzerConfiguration()
     num_processes = config.argument_values['p']
-    use_concolic = config.argument_values['concolic']
+    num_concolic = config.argument_values['concolic']
     reload = False
 
     if config.argument_values['Purge'] and check_if_old_state_exits(config.argument_values['work_dir']):
@@ -71,7 +71,7 @@ def main():
 
     DO_USE_UI = (USE_UI and not config.argument_values['verbose'] and
                 config.argument_values['f'])
-    comm = Communicator(num_processes = num_processes, concolic_thread=use_concolic)
+    comm = Communicator(num_processes = num_processes, concolic_thread=num_concolic)
     master = MasterProcess(comm, reload=reload)
     mapserver_process = multiprocessing.Process(name='MAPSERVER', target=mapserver_loader, args=(comm,reload))
     modelserver_process = multiprocessing.Process(name='MODELSERVER', target=modelserver_loader, args=(comm,))
@@ -81,8 +81,13 @@ def main():
     for i in range(num_processes):
         slave = SlaveThread(comm, i, reload=reload)
         slaves.append(slave)
-    if use_concolic:
-        slaves.append(ConcolicThread(comm, num_processes))
+    concolic_models = []
+    for i in range(num_concolic):
+        controller = ConcolicController(comm, num_processes, i)
+        slaves.append(controller)
+        concolic_models.append(controller.model)
+
+    concserv = ConcolicServerThread(comm, num_processes, num_concolic, concolic_models)
 
     comm.start()
     comm.create_shm()
@@ -92,6 +97,7 @@ def main():
 
     mapserver_process.start()
     modelserver_process.start()
+    concserv.start()
 
     for slave in slaves:
         slave.start()
@@ -106,6 +112,7 @@ def main():
         # Wait for child processes to properly exit
         mapserver_process.join()
         update_process.join()
+        concserv.stop()
         
         # Properly stop threads
         for slave in slaves:

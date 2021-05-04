@@ -44,16 +44,10 @@ class ModelServerProcess:
             if msg.tag ==  DRIFUZZ_REQ_READ_IDX:
                 key, _, _ = msg.data
                 res = self.global_model.get_read_idx(*msg.data)
-                if msg.source == self.config.argument_values['p']:
-                    send_msg(DRIFUZZ_REQ_READ_IDX, (key, res), self.comm.to_concolicserver_queue)
-                else:
-                    send_msg(DRIFUZZ_REQ_READ_IDX, (key, res), self.comm.to_slave_queues[msg.source])
+                send_msg(DRIFUZZ_REQ_READ_IDX, (key, res), self.comm.to_slave_queues[msg.source])
             elif msg.tag == DRIFUZZ_REQ_DMA_IDX:
                 key, _, _ = msg.data
                 res = self.global_model.get_dma_idx(*msg.data)
-                if msg.source == self.config.argument_values['p']:
-                    send_msg(DRIFUZZ_REQ_DMA_IDX, (key, res), self.comm.to_concolicserver_queue)
-                else:
-                    send_msg(DRIFUZZ_REQ_DMA_IDX, (key, res), self.comm.to_slave_queues[msg.source])
+                send_msg(DRIFUZZ_REQ_DMA_IDX, (key, res), self.comm.to_slave_queues[msg.source])
             else:
                 continue

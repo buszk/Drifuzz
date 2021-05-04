@@ -26,6 +26,7 @@ import select
 import socket
 import subprocess
 import time
+import signal
 from socket import error as socket_error
 import psutil
 import mmh3
@@ -179,3 +180,9 @@ class qemu:
         self.kafl_shm       = mmap.mmap(self.kafl_shm_f, self.bitmap_size, mmap.MAP_SHARED, mmap.PROT_WRITE | mmap.PROT_READ)
         os.close(self.kafl_shm_f)
         return True
+
+    def suspend(self):
+        os.kill(self.process.pid, signal.SIGSTOP)
+    
+    def resume(self):
+        os.kill(self.process.pid, signal.SIGCONT)

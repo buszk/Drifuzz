@@ -61,11 +61,13 @@ def find_diffs(data_a, data_b):
 def prepare_working_dir(directory_path, purge=False):
     folders = ["/findings/", "/corpus", "/findings/panic", "/findings/kasan", "/findings/timeout", "/rbuf", "/evaluation"]
 
+    excludes = ["debug.log"]
     if purge:
         if os.path.isdir(directory_path):
             for root, dirs, files in os.walk(directory_path, topdown=False):
                 for name in files:
-                    os.remove(os.path.join(root, name))
+                    if name not in excludes:
+                        os.remove(os.path.join(root, name))
                 for name in dirs:
                     os.rmdir(os.path.join(root, name))
         if os.path.exists("/dev/shm/kafl_filter0"):

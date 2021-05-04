@@ -235,8 +235,8 @@ class FuzzerConfiguration:
                             help='Path to the reproduce input.')
         parser.add_argument('--timeout', type=int, default=20,
                             help='Set fuzzing exectioin timeout')
-        parser.add_argument('--concolic', default=False, action='store_true',
-                            help='enable concolic mode')
+        parser.add_argument('--concolic', default=0, type=int,
+                            help='number of concolic threads')
 
         parser.add_argument('-p', required=False, metavar='<Process Number>', help='number of worker processes to start.', default=1, type=int)
         parser.add_argument('-t', required=False, metavar='<Task Number>', help='tasks per worker request to provide.', default=1, type=int)

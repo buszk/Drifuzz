@@ -55,6 +55,7 @@ class SlaveThread(threading.Thread):
         self.bitmap_size = self.config.config_values['BITMAP_SHM_SIZE']
         self.bitmap_filename = self.comm.files[2] + str(self.slave_id)
         self.comm.slave_locks_bitmap[self.slave_id].acquire()
+        # self.lock_concolic_thread()
     
         self.reproduce = self.config.argument_values['reproduce']
 
@@ -172,18 +173,21 @@ class SlaveThread(threading.Thread):
         log_slave('bitmap covers %d bytes; global bitmap covers %d bytes' % (result, global_cnt), self.slave_id)
 
     def lock_concolic_thread(self):
-        if self.slave_id == 0:
+        if self.slave_id < len(self.comm.concolic_locks):
+            log_slave(f"try locking {self.slave_id}", self.slave_id)
+            self.q.suspend()
             while not self.stopped():
-                if self.comm.concolic_lock.acquire(timeout=0.1):
+                if self.comm.concolic_locks[self.slave_id].acquire(timeout=0.1):
                     break
-            log_slave("concolic locked", 0)
+            self.q.resume()
+            log_slave("concolic locked", self.slave_id)
 
     def unlock_concolic_thread(self):
-        if self.slave_id == 0:
+        if self.slave_id < len(self.comm.concolic_locks):
             # Fool-proof unlock
-            self.comm.concolic_lock.acquire(block=False)
-            self.comm.concolic_lock.release()
-            log_slave("concolic unlocked", 0)
+            self.comm.concolic_locks[self.slave_id].acquire(block=False)
+            self.comm.concolic_locks[self.slave_id].release()
+            log_slave("concolic unlocked", self.slave_id)
 
     def send_bitmap(self, perf = 10, kasan = False, timeout = False, payload = None):
         if self.exit_if_reproduce():
@@ -196,6 +200,7 @@ class SlaveThread(threading.Thread):
             bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
             bitmap_shm.seek(0)
             bitmap = bitmap_shm.read(self.bitmap_size)
+            self.lock_concolic_thread()
             # Reply master's BITMAP cmd
             send_msg(KAFL_TAG_REQ_BITMAP, bitmap, self.comm.to_master_queue, source = self.slave_id)
             # Ask master for new payloads once
@@ -250,6 +255,8 @@ class SlaveThread(threading.Thread):
         while not self.stopped():
             if self.payload_sem.acquire(timeout=0.1):
                 break
+        else:
+            return None
         payload = self.payload
         # print(len(payload))
         assert(self.state != SlaveState.WAITING)

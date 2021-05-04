@@ -117,7 +117,7 @@ class Communicator:
     models: [Model] = []
     socks: [SocketThread] = []
     
-    def __init__(self, num_processes=1, concolic_thread=False):
+    def __init__(self, num_processes=1, concolic_thread=0):
         self.num_processes = num_processes
         uuid = shortuuid.uuid()
         self.files = [f"/dev/shm/drifuzz_master_{uuid}_", f"/dev/shm/drifuzz_mapserver_{uuid}_", f"/dev/shm/drifuzz_bitmap_{uuid}_"]
@@ -149,8 +149,11 @@ class Communicator:
             self.to_slave_queues.append(multiprocessing.Queue())
             self.to_slave_queues[i].cancel_join_thread()
             self.socks.append(SocketThread(self.qemu_socket_prefix + str(i)))
-        if concolic_thread:
-            self.socks.append(SocketThread(self.qemu_socket_prefix + str(num_processes)))
+        
+        for i in range(concolic_thread):
+            self.to_slave_queues.append(multiprocessing.Queue())
+            self.to_slave_queues[i].cancel_join_thread()
+            self.socks.append(SocketThread(self.qemu_socket_prefix + str(num_processes+i)))
 
         self.slave_locks_bitmap = []
         self.slave_locks_A = []
@@ -160,7 +163,9 @@ class Communicator:
             self.slave_locks_A.append(multiprocessing.Lock())
             self.slave_locks_B.append(multiprocessing.Lock())
             self.slave_locks_B[i].acquire()
-        self.concolic_lock = multiprocessing.Lock()
+        self.concolic_locks = []
+        for i in range(concolic_thread):
+            self.concolic_locks.append(multiprocessing.Lock())
 
         self.stage_abortion_notifier = multiprocessing.Value('b', False)
         self.slave_termination = multiprocessing.Value('b', False, lock=False)

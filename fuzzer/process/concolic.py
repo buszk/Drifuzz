@@ -11,13 +11,14 @@ from protocol import *
 import shutil
 from os.path import dirname, realpath, join
 
-class ConcolciWorker(threading.Thread):
-    def __init__(self, comm, target, payload, model, slave_id, log, work_dir):
+class ConcolicWorker(threading.Thread):
+    def __init__(self, comm, target, payload, model, concolic_id, nproc, log, work_dir):
         threading.Thread.__init__(self)
         self.comm = comm
         self.model = model
         self.target = target
-        self.slave_id = slave_id
+        self.concolic_id = concolic_id
+        self.slave_id = nproc + concolic_id
         self._stop_event = threading.Event()
         self.log = log
         self.payload = payload
@@ -25,15 +26,17 @@ class ConcolciWorker(threading.Thread):
 
     def run(self):
         while not self.stopped():
-            if self.comm.concolic_lock.acquire(timeout=0.1):
+            if self.comm.concolic_locks[self.concolic_id].acquire(timeout=0.1):
                 break
+        else:
+            return
         self.model.payload = self.payload
         self.model.payload_len = len(self.payload)
         self.model.read_cnt = {}
         self.model.dma_cnt = {}
-        log_concolicserver("concolic locked")
-        fname = join(self.work_dir, 'tmp_conc_payload')
-        outdir = join(self.work_dir, 'tmp_conc_out')
+        log_concolicserver("concolic locked " + str(self.concolic_id))
+        fname = join(self.work_dir, f'tmp_conc_payload_{self.concolic_id}')
+        outdir = join(self.work_dir, f'tmp_conc_out_{self.concolic_id}')
         drifuzz_path = dirname(dirname(dirname(realpath(__file__))))
         
         # Preparation
@@ -49,10 +52,12 @@ class ConcolciWorker(threading.Thread):
                 f'{drifuzz_path}/../drifuzz-panda/concolic.py',
                 self.target, fname,
                 '--outdir', outdir,
+                '--tempdir',
+                '--pincpu', f'{2*self.concolic_id},{2*self.concolic_id+1}',
                 '--socket', self.comm.qemu_socket_prefix + str(self.slave_id)
                 ]
         p = subprocess.Popen(cmd,
-                            stdin=None,
+                            stdin=subprocess.DEVNULL,
                             stdout=self.log,
                             stderr=self.log)
         total_timeout = 500
@@ -65,7 +70,7 @@ class ConcolciWorker(threading.Thread):
                     # Concolic timedout
                     p.kill()
                     log_concolicserver("thread timedout. Killing concolic process")
-                    self.comm.concolic_lock.release()
+                    self.comm.concolic_locks[self.concolic_id].release()
                     return
                 continue
             break
@@ -80,13 +85,13 @@ class ConcolciWorker(threading.Thread):
                 file_path = os.path.join(outdir, filename)
                 with open(file_path, 'rb') as f:
                     payloads.append(f.read())
-        log_concolicserver(f"Concolic generate {len(payloads)} inputs")
+        log_concolicserver(f"Concolic generate {len(payloads)} inputs " + str(self.concolic_id))
 
         # Send to master
         for pl in payloads:
             send_msg(DRIFUZZ_NEW_INPUT, pl, self.comm.to_master_queue)
-        self.comm.concolic_lock.release()
-        log_concolicserver("concolic unlocked")
+        self.comm.concolic_locks[self.concolic_id].release()
+        log_concolicserver("concolic unlocked " + str(self.concolic_id))
 
     def stop(self):
         self._stop_event.set()
@@ -94,30 +99,16 @@ class ConcolciWorker(threading.Thread):
     def stopped(self):
         return self._stop_event.is_set()
 
-
-
-class ConcolicThread(threading.Thread):
-
-    def __init__(self, comm, nproc):
+class ConcolicController(threading.Thread):
+    def __init__(self, comm, nproc, concolic_id):
         threading.Thread.__init__(self)
         self.comm = comm
-        self.config = FuzzerConfiguration()
         self.idx_sem = threading.BoundedSemaphore(value=1)
         self.idx_sem.acquire()
         self.model = Model(self)
-        self.comm.register_model(nproc, self.model)
+        self.comm.register_model(nproc + concolic_id, self.model)
+        self.slave_id = nproc + concolic_id
         self._stop_event = threading.Event()
-        self.slave_id = nproc
-        self.target = self.config.argument_values['target']
-        self.workers = []
-        self.work_dir = self.config.argument_values['work_dir']
-        self.log = open(join(self.work_dir, 'tmp_conc_log'), 'w')
-
-    def run_concolic(self, payload):
-        worker_thread = ConcolciWorker(
-            self.comm, self.target, payload, self.model, self.slave_id, self.log, self.work_dir)
-        self.workers.append(worker_thread)
-        worker_thread.start()
 
     def req_read_idx(self, key, size, cnt):
         send_msg(DRIFUZZ_REQ_READ_IDX, (key, size, cnt), \
@@ -149,19 +140,71 @@ class ConcolicThread(threading.Thread):
 
     def loop(self):
         while not self.stopped():
-            msg = recv_msg(self.comm.to_concolicserver_queue, timeout=0.1)
+            msg = recv_msg(self.comm.to_slave_queues[self.slave_id], timeout=0.1)
             if msg is None:
                 continue
-            if msg.tag ==  DRIFUZZ_NEW_INPUT:
-                log_concolicserver("Received DRIFUZZ_NEW_INPUT")
-                self.run_concolic(msg.data)        
-            elif msg.tag == DRIFUZZ_REQ_READ_IDX or \
+            if msg.tag == DRIFUZZ_REQ_READ_IDX or \
                 msg.tag == DRIFUZZ_REQ_DMA_IDX:
                 key, idx = msg.data
                 self.idx = idx
                 # log_concolicserver(f"Received index {self.idx}")
                 self.idx_sem.release()
-        self.log.close()
+
+    def run(self):
+        self.loop()
+
+    def stop(self):
+        self._stop_event.set()
+        
+    def stopped(self):
+        return self._stop_event.is_set()
+
+
+class ConcolicServerThread(threading.Thread):
+
+    def __init__(self, comm, nproc, num_concolic, models):
+        threading.Thread.__init__(self)
+        self.comm = comm
+        self.config = FuzzerConfiguration()
+        self.nproc = nproc
+        self.num_concolic = num_concolic
+        self._stop_event = threading.Event()
+        self.target = self.config.argument_values['target']
+        self.workers = []
+        self.work_dir = self.config.argument_values['work_dir']
+        self.logs = []
+        for i in range(num_concolic):
+            self.logs.append(open(join(self.work_dir, f'tmp_conc_log_{i}'), 'w'))
+        self.current = 0
+        assert len(models) == num_concolic
+        self.models = models
+    
+    def _next(self):
+        self.current += 1
+        self.current %= self.num_concolic
+
+    def run_concolic(self, payload):
+        log_concolicserver(f"Creating concolic worker on queue {self.current}")
+        worker_thread = ConcolicWorker(
+            self.comm, self.target, payload,
+            self.models[self.current], self.current, self.nproc,
+            self.logs[self.current], self.work_dir)
+        self.workers.append(worker_thread)
+        worker_thread.start()
+        self._next()
+
+
+
+    def loop(self):
+        while not self.stopped():
+            msg = recv_msg(self.comm.to_concolicserver_queue, timeout=0.1)
+            if msg is None:
+                continue
+            if msg.tag ==  DRIFUZZ_NEW_INPUT:
+                log_concolicserver("Received DRIFUZZ_NEW_INPUT")
+                self.run_concolic(msg.data)
+        for lf in self.logs:
+            lf.close()
 
     def run(self):
         self.loop()
