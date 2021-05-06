@@ -210,12 +210,14 @@ class MasterProcess:
                 if len(self.concolic_payloads) > 0:
                     self.__task_send([self.concolic_payloads[0]], msg.data, self.comm.to_slave_queues[int(msg.data)], imported=True)
                     self.concolic_payloads.pop(0)
+                    # Continue until the queue is consumed
+                    continue
                 else:
                     self.__task_send(self.payload_buffer, msg.data, self.comm.to_slave_queues[int(msg.data)])
                     self.abortion_counter += len(self.payload_buffer)
                     self.counter += len(self.payload_buffer)
                     self.round_counter += len(self.payload_buffer)
-                break
+                    break
             elif msg.tag == KAFL_TAG_ABORT_REQ:
                 log_master("Abortion request received...")
                 self.stage_abortion = True
