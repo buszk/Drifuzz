@@ -62,6 +62,12 @@ class SlaveThread(threading.Thread):
         self.globalmodel = None
         if self.reproduce:
             self.globalmodel = GlobalModel(self.config)
+
+        # Grab the lock during initialization
+        if self.slave_id < len(self.comm.concolic_locks):
+            self.comm.concolic_locks[self.slave_id].acquire()
+            log_slave("concolic locked", self.slave_id)
+
         
 
     def __del__(self):
