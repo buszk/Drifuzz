@@ -17,9 +17,9 @@ echo "target: $target"
 echo "work directory: $work"
 echo "seed directory: $seed"
 
-if [ ! -f ~/Workspace/git/drifuzz-panda/work/$target/$target.qcow2 ]; then
+if [ ! -f ~/Workspace/git/drifuzz-concolic/work/$target/$target.qcow2 ]; then
     echo "Cannot run concolic script because concolic image for $target isn't setup"
-    echo "Go to drifuzz-panda directory and run:"
+    echo "Go to drifuzz-concolic directory and run:"
     echo "  ./snapshot_helper.py $target"
     exit 1
 fi

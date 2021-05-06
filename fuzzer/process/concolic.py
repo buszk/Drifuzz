@@ -49,7 +49,7 @@ class ConcolicWorker(threading.Thread):
         # Run concolic script
         cmd = [
                 'python3', '-u',
-                f'{drifuzz_path}/../drifuzz-panda/concolic.py',
+                f'{drifuzz_path}/../drifuzz-concolic/concolic.py',
                 self.target, fname,
                 '--outdir', outdir,
                 '--tempdir',
