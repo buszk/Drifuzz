@@ -165,6 +165,8 @@ class Model(object):
         # print("requesting payload")
         self.payload:bytearray = self.slave.fetch_payload()
         # print(self.payload[0:20])
+        if self.payload is None:
+            return (0, )
         self.payload_len = len(self.payload)
         self.data_cnt = {}
         self.read_cnt = {}

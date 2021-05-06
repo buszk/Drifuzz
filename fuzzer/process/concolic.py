@@ -28,8 +28,10 @@ class ConcolicWorker(threading.Thread):
         while not self.stopped():
             if self.comm.concolic_locks[self.concolic_id].acquire(timeout=0.1):
                 break
-        else:
+
+        if self.stopped():
             return
+
         self.model.payload = self.payload
         self.model.payload_len = len(self.payload)
         self.model.read_cnt = {}

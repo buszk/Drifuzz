@@ -266,7 +266,7 @@ class MapserverProcess:
         return False
 
     def __pre_sync_handler(self):
-        log_mapserver("__pre_sync_handler: " + str(self.round_counter_master_pre ) + " / " + str(self.round_counter))
+        log_mapserver("__pre_sync_handler: " + str(self.round_counter) + " / " + str(self.round_counter_master_pre ))
         if (self.round_counter_master_pre == self.round_counter):# or self.abortion_alredy_sent:
             send_msg(KAFL_TAG_UNTOUCHED_NODES, self.treemap.get_num_of_untouched_nodes(),
                      self.comm.to_master_from_mapserver_queue)

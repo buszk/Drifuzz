@@ -60,7 +60,7 @@ class SocketThread (threading.Thread):
                     ty: bytearray[8] = connection.recv(8)
                     last_contact_time = time.time()
                     if self.stopped():
-                        break
+                        return
                     # log_slave(f"received {ty}", self.model.slave.slave_id)
                     if ty == b'':
                         break
@@ -76,7 +76,7 @@ class SocketThread (threading.Thread):
                         Command(_ty) == Command.EXEC_TIMEOUT:
                         break
                     if self.stopped():
-                        break
+                        return
                     if ret != None and opt['retfmt'] != '':
                         _ret = struct.pack(opt['retfmt'], *ret)
                         # log_slave(f"sent {_ret}", self.model.slave.slave_id)
@@ -87,12 +87,19 @@ class SocketThread (threading.Thread):
 
                 except socket.timeout:
                     pass
+                except BrokenPipeError:
+                    if self.stopped():
+                        return
                 except ConnectionResetError as e:
+                    if self.stopped():
+                        return
                     print(f"last_command={last_command}", file=sys.stderr)
                     print("ConnectionResetError", file=sys.stderr)
                     log_slave("ConnectionResetError", self.model.slave.slave_id)
                     break
                 except OSError as e:
+                    if self.stopped():
+                        return
                     log_slave("OSError", self.model.slave.slave_id)
                     print("==========", file=sys.stderr)
                     print(f"address={self.address}", file=sys.stderr)
