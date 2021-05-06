@@ -54,7 +54,7 @@ class ConcolicWorker(threading.Thread):
                 f'{drifuzz_path}/../drifuzz-concolic/concolic.py',
                 self.target, fname,
                 '--outdir', outdir,
-                '--tempdir',
+                '--tempdir', '--notrim',
                 '--pincpu', f'{2*self.concolic_id},{2*self.concolic_id+1}',
                 '--socket', self.comm.qemu_socket_prefix + str(self.slave_id)
                 ]

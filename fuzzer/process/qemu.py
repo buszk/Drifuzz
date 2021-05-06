@@ -30,7 +30,7 @@ import signal
 from socket import error as socket_error
 import psutil
 import mmh3
-from os.path import dirname
+from os.path import dirname, join
 
 # from common.debug import log_qemu
 # from common.util import atomic_write
@@ -102,6 +102,7 @@ class qemu:
         self.initial_mem_usage = 0
 
         self.stat_fd = None
+        self.log=subprocess.DEVNULL
 
         self.virgin_bitmap = bytearray(self.bitmap_size)
         for i in range(self.bitmap_size):
@@ -146,10 +147,13 @@ class qemu:
                                                     stderr=None)
                 else:
                     #TODO: maybe a log file? devnull is fast, PIPE is very slow
+                    self.log = open(join(self.config.argument_values['work_dir'], f'qemu_{self.qemu_id}.log'), 'w')
                     self.process = subprocess.Popen(cmd,
                                                     stdin=subprocess.DEVNULL,
-                                                    stdout=subprocess.DEVNULL,
-                                                    stderr=subprocess.DEVNULL)
+                                                    stdout=self.log,
+                                                    stderr=self.log)
+                                                    # stdout=subprocess.DEVNULL,
+                                                    # stderr=subprocess.DEVNULL)
             except OSError as e:
                 log_qemu("OSError in subprocess.Popen", self.qemu_id)
                 print("OSError in subprocess.Popen", self.qemu_id)
