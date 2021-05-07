@@ -184,6 +184,7 @@ class Model(object):
 
     def handle_vm_ready(self):
         # print("VM ready")
+        self.slave.qemu_ready()
         return (0,)
 
     def handle_vm_kasan(self):

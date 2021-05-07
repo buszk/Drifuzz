@@ -55,7 +55,7 @@ class SlaveThread(threading.Thread):
         self.bitmap_size = self.config.config_values['BITMAP_SHM_SIZE']
         self.bitmap_filename = self.comm.files[2] + str(self.slave_id)
         self.comm.slave_locks_bitmap[self.slave_id].acquire()
-        # self.lock_concolic_thread()
+        self._qemu_ready = False
     
         self.reproduce = self.config.argument_values['reproduce']
 
@@ -82,6 +82,27 @@ class SlaveThread(threading.Thread):
             return True
         return False
 
+    def start_vm(self):
+        v = False
+        g = False
+        if self.reproduce and self.reproduce != "":
+            v = True
+        elif self.config.argument_values['verbose']:
+            v = True
+            g = True
+
+        self._qemu_ready = False
+        while not self._qemu_ready:
+            self.q.__del__()
+            self.q = qemu(self.slave_id, self.comm.files[2], self.comm.qemu_socket_prefix, config=self.config)
+            self.q.start(verbose=v, gdb=g)
+            # Wait for 20s to check if qemu is ready
+            for _ in range(20):
+                if self.stopped():
+                    return
+                time.sleep(1)
+                if self._qemu_ready:
+                    break
     
     def restart_vm(self, reuse=False):
         log_slave(f"restarting vm reuse={reuse}", self.slave_id)
@@ -93,21 +114,10 @@ class SlaveThread(threading.Thread):
         self.idx_sem.acquire(blocking=False)
         self.unlock_concolic_thread()
 
-        while True:
-            self.q.__del__()
-            self.q = qemu(self.slave_id, self.comm.files[2], self.comm.qemu_socket_prefix, config=self.config)
-            v = False
-            g = False
-            if self.reproduce and self.reproduce != "":
-                v = True
-            elif self.config.argument_values['verbose']:
-                v = True
-                g = True
-            if self.q.start(verbose=v, gdb=g):
-                break
-            else:
-                time.sleep(1)
-                print('Fail Reload')
+        # Avoid blocking socket thread 
+        # let the slave thread to start vm.
+        send_msg(DRIFUZZ_START_QEMU, None, self.comm.to_slave_queues[self.slave_id])
+
         if self.comm.slave_termination.value:
             return False
         # Reuse self.payload
@@ -337,21 +347,21 @@ class SlaveThread(threading.Thread):
             self.idx = idx
             self.idx_sem.release()
 
+        elif response.tag == DRIFUZZ_START_QEMU:
+            self.start_vm()
+
         else:
             log_slave("Received TAG: " + str(response.tag), self.slave_id)
 
+    def qemu_ready(self):
+        log_slave("QEMU instance is ready", self.slave_id)
+        self._qemu_ready = True
 
     def loop(self):
         # print('starting qemu')
         # self.comm.reload_semaphore.acquire()
-        v = False
-        g = False
-        if self.reproduce and self.reproduce != "":
-            v = True
-        elif self.config.argument_values['verbose']:
-            v = True
-            g = True
-        self.q.start(verbose=v, gdb=g)
+
+        self.start_vm()
         # self.comm.reload_semaphore.release()
         # print('started qemu')
         send_msg(KAFL_TAG_REQ, self.q.qemu_id, self.comm.to_master_queue, source=self.slave_id)

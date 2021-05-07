@@ -104,7 +104,7 @@ class MasterProcess:
             start_time = time.time()
             self.__recv_tagged_msg(self.comm.to_master_queue, KAFL_TAG_START)
             self.kafl_state.slaves_ready += 1
-            if (time.time() - start_time) >= 0.1:
+            if (time.time() - start_time) >= 0.01:
                 send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
 
         self.kafl_state.loading = False
