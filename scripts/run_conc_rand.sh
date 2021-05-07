@@ -24,6 +24,11 @@ if [ ! -f ~/Workspace/git/drifuzz-concolic/work/$target/$target.qcow2 ]; then
     exit 1
 fi
 
+for i in $(seq 0 $(($cnp-1))); do
+    cp ~/Workspace/git/drifuzz-concolic/work/$target/$target.qcow2 \
+        ~/Workspace/git/drifuzz-concolic/work/$target/$target_$i.qcow2
+done
+
 rm -rf $work/tmp_conc_*
 
 # Run fuzzing
