@@ -25,8 +25,9 @@ if [ ! -f ~/Workspace/git/drifuzz-concolic/work/$target/$target.qcow2 ]; then
 fi
 
 for i in $(seq 0 $(($cnp-1))); do
+    echo ${target}_${i}.qcow2
     cp ~/Workspace/git/drifuzz-concolic/work/$target/$target.qcow2 \
-        ~/Workspace/git/drifuzz-concolic/work/$target/$target_$i.qcow2
+        ~/Workspace/git/drifuzz-concolic/work/$target/${target}_${i}.qcow2
 done
 
 # Prepare work directory with globalmodule.json
