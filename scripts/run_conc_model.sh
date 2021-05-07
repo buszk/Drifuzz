@@ -10,7 +10,7 @@ work=work/work-$target-conc-model
 seed=seed/seed-$target
 np=$(nproc)
 np=$(($np/2))
-cnp=$(($np/2))
+cnp=$(($np/8))
 
 echo "$np Processes"
 echo "target: $target"
@@ -41,4 +41,4 @@ mkdir -p $seed
 cp ~/Workspace/git/drifuzz-concolic/work/$target/out/0 $seed
 
 # Run fuzzing
-python3 fuzzer/drifuzz.py --concolic $cnp -D -p $np $seed $work $target  --timeout 4
+python3 fuzzer/drifuzz.py --concolic $cnp -D -p $np $seed $work $target
