@@ -10,7 +10,8 @@ work=work/work-$target-conc
 seed=seed/seed-random
 np=$(nproc)
 np=$(($np/2))
-cnp=$(($np/8))
+# cnp=$(($np/8))
+cnp=1
 
 echo "$np Processes"
 echo "target: $target"
