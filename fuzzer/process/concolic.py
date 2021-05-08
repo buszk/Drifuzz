@@ -50,13 +50,14 @@ class ConcolicWorker(threading.Thread):
 
         # Run concolic script
         cmd = [
+                'taskset', '-c', f'{2*self.concolic_id},{2*self.concolic_id+1}',
                 'python3', '-u',
                 f'{drifuzz_path}/../drifuzz-concolic/concolic.py',
                 self.target, fname,
                 '--outdir', outdir,
                 '--tempdir',
                 '--id', str(self.concolic_id),
-                '--pincpu', f'{2*self.concolic_id},{2*self.concolic_id+1}',
+                # '--pincpu', f'{2*self.concolic_id},{2*self.concolic_id+1}',
                 '--socket', self.comm.qemu_socket_prefix + str(self.slave_id)
                 ]
         p = subprocess.Popen(cmd,
