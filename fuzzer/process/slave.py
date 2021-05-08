@@ -112,7 +112,6 @@ class SlaveThread(threading.Thread):
 
         # Consume the idx_sem if it is released
         self.idx_sem.acquire(blocking=False)
-        self.unlock_concolic_thread()
 
         # Avoid blocking socket thread 
         # let the slave thread to start vm.
