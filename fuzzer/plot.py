@@ -36,6 +36,7 @@ titles = [
     'cycles',
     'fav_pending',
     'blacklisted',
+    'total',
     'byte_covered',
 ]
 
