@@ -23,7 +23,7 @@ import time
 import collections
 from multiprocessing import Manager
 import os
-from os.path import join, exists
+from os.path import join, islink
 from common.config import FuzzerConfiguration
 
 
@@ -55,8 +55,8 @@ def __init_logger():
     output_file = open(output_fname, 'w')
     while True:
         try:
-            if exists("debug.log"):
-                os.remove("debug.log")
+            if islink("debug.log"):
+                os.unlink("debug.log")
             os.symlink(output_fname, "debug.log")
         except FileExistsError:
             continue
