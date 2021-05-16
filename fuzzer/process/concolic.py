@@ -91,6 +91,10 @@ class ConcolicWorker(threading.Thread):
                     payloads.append(f.read())
         log_concolicserver(f"Concolic generate {len(payloads)} inputs " + str(self.concolic_id))
 
+        # If no inputs were generated, redo the analysis
+        if len(payloads) <= 1:
+            send_msg(DRIFUZZ_NEW_INPUT, self.payload, self.comm.to_concolicserver_queue)
+
         # Send to master
         for pl in payloads:
             send_msg(DRIFUZZ_NEW_INPUT, pl, self.comm.to_master_queue)
