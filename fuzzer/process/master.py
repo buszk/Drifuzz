@@ -211,7 +211,11 @@ class MasterProcess:
                     self.__task_send([self.concolic_payloads[0]], msg.data, self.comm.to_slave_queues[int(msg.data)], imported=True)
                     self.concolic_payloads.pop(0)
                     # Continue until the queue is consumed
-                    send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
+                    # send_msg(KAFL_TAG_OUTPUT, self.kafl_state, self.comm.to_update_queue)
+                    if (time.time() - self.start) >= self.refresh_rate and not self.mapserver_status_pending:
+                        self.mapserver_status_pending = True
+                        send_msg(KAFL_TAG_MAP_INFO, None, self.comm.to_mapserver_queue)
+                        self.start = time.time()
                     continue
                 else:
                     self.__task_send(self.payload_buffer, msg.data, self.comm.to_slave_queues[int(msg.data)])
