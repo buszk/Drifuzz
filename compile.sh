@@ -59,24 +59,20 @@ done
 # compile panda
 if [ "$BUILD_PANDA" = 1 ]; then
     pushd $PWD
-    panda/drifuzz/scripts/generate_filter_pc.py linux-module-build/vmlinux
+    panda/drifuzz/scripts/generate_filter_pc.py --vmlinux linux-module-build/vmlinux
     if [ ! -d panda-build ] || [ "$REBUILD_PANDA" = 1 ]; then
-        if [ -z "$LLVM_INSTALL" ] || [ ! -d "$LLVM_INSTALL" ]; then
-            echo "Please specify LLVM install directory"
-            exit 1
-        else
-            rm -rf panda-build
-            mkdir panda-build
-            ( cd panda-build &&
-            ../panda/configure \
-                --target-list=x86_64-softmmu \
-                --cc=gcc --cxx=g++ \
-                --enable-llvm --with-llvm="$LLVM_INSTALL" \
-                --extra-cxxflags=-Wno-error=class-memaccess \
-                --disable-werror \
-                --python=python3
-            )
-        fi
+        rm -rf panda-build
+        mkdir panda-build
+        ( cd panda-build &&
+        ../panda/configure \
+            --target-list=x86_64-softmmu \
+            --cc=gcc --cxx=g++ \
+            --enable-llvm \
+            --extra-cxxflags=-Wno-error=class-memaccess \
+            --disable-werror \
+            --python=python3
+        )
+        
     fi
     [ -f panda-build/Makefile ] && make -C panda-build -j$NP
     popd
