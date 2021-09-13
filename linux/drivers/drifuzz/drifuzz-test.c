@@ -27,6 +27,11 @@ static uint32_t read_offset(uint32_t offset) {
 	return readl((char*)adapter->hw_addr + offset);
 }
 
+static void write_offset(uint32_t offset, uint32_t val) {
+	if (!adapter) return;
+	writel(val, (char*)adapter->hw_addr + offset);
+}
+
 static void goal(void) {
 	if (read_offset(0x88) == 0xffff)
 		read_offset(0);
@@ -74,6 +79,7 @@ static void test_short_loop(void) {
 static void test_long_loop(void) {
 	int i;
 	for (i = 0; i < 100; i++)
+		write_offset(0, i);
 		if (read_offset(0) != i) 
 			return;
 	goal();
