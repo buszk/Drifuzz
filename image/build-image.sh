@@ -31,17 +31,12 @@ echo "nameserver 8.8.8.8" | sudo tee -a $DIR/etc/resolve.conf
 echo "syzkaller" | sudo tee $DIR/etc/hostname
 else
 # Build a disk image
-if [ -f driver ]; then
-    sudo cp driver chroot/root
-    echo '#!/bin/bash' | sudo tee chroot/etc/rc.local
-    echo 'sysctl kernel.unknown_nmi_panic=1' | sudo tee -a chroot/etc/rc.local
-    echo '/root/driver' | sudo tee -a chroot/etc/rc.local
-    sudo chmod +x chroot/etc/rc.local
-else
-    echo '#!/bin/bash' | sudo tee chroot/etc/rc.local
-    echo 'sysctl kernel.unknown_nmi_panic=1' | sudo tee -a chroot/etc/rc.local
-    sudo chmod +x chroot/etc/rc.local
-fi
+sudo cp driver-main chroot/root
+sudo cp *.sh chroot/root
+echo '#!/bin/bash' | sudo tee chroot/etc/rc.local
+echo 'sysctl kernel.unknown_nmi_panic=1' | sudo tee -a chroot/etc/rc.local
+echo '/root/driver-main' | sudo tee -a chroot/etc/rc.local
+sudo chmod +x chroot/etc/rc.local
 
 sudo dd if=/dev/zero of=$RELEASE.img bs=1M seek=$SEEK count=1
 sudo mkfs.ext4 -F $RELEASE.img
