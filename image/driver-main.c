@@ -58,7 +58,7 @@ void get_drifuzz_args() {
     /* get target */
     if (read(fd, &len, sizeof(uint64_t)) < 0)
         perror("Getting target");
-    printf("target length: %d\n", len);
+    printf("target length: %ld\n", len);
     if (len > 0)
         target = malloc(len);
     if (read(fd, target, len) < 0)
@@ -67,7 +67,7 @@ void get_drifuzz_args() {
     /* get prog */
     if (read(fd, &len, sizeof(uint64_t)) < 0)
         perror("Getting prog");
-    printf("prog length: %d\n", len);
+    printf("prog length: %ld\n", len);
     if (len > 0)
         prog = malloc(len);
     if (read(fd, prog, len) < 0)
@@ -111,6 +111,12 @@ int main(int argc, char **argv) {
     /* For tracing via qemu nmi cmd */
     system("sysctl kernel.unknown_nmi_panic=1");
     system("echo '1' > /sys/module/rcupdate/parameters/rcu_cpu_stall_suppress");
+
+    /* Prepare by loading all depended modules */
+    snprintf(cmd, sizeof(cmd), "/root/prog-prepare.sh %s", target);
+    printf("%s\n", cmd);
+    system(cmd);
+    memset(cmd, 0, sizeof(cmd));
 
     if (ioctl(fd, KCOV_ENABLE, KCOV_TRACE_PC))
         perror("ioctl"), exit(1);
