@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# != 1 ];then 
+if [ $# != 1 ];then
     echo "Usage: $0 <target>"
     exit 1
 fi
@@ -17,4 +17,5 @@ echo "work directory: $work"
 echo "seed directory: $seed"
 
 # Run fuzzing
-python3 fuzzer/drifuzz.py --Purge -D -p $np $seed $work $target 
+python3 fuzzer/drifuzz.py --Purge -D -p $np $seed $work $target
+stty sane

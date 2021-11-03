@@ -9,3 +9,4 @@ work=$2
 input=$3
 
 python3 fuzzer/reproduce.py --reproduce $input seed/seed $work $target
+stty sane

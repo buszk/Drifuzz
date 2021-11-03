@@ -18,5 +18,5 @@ rm -rf $work
 mkdir -p $work
 
 # Run fuzzing
-python3 fuzzer/drifuzz.py --verbose -D -p 1 $seed $work $target
+python3 fuzzer/drifuzz.py --gdb -D -p 1 $seed $work $target
 stty sane

@@ -10,3 +10,4 @@ for f in $work/corpus/*; do
     echo "File: $f"
     ./reproduce.sh $target $work $f
 done
+stty sane

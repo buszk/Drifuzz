@@ -231,7 +231,7 @@ class FuzzerConfiguration:
         # parser.add_argument('-ip1', required=False, metavar='<IP-Filter 1>', type=parse_range_ip_filter, help='instruction pointer filter range 1 (not supported in this version)')
         # parser.add_argument('-ip2', required=False, metavar='<IP-Filter 2>', type=parse_range_ip_filter, help='instruction pointer filter range 2 (not supported in this version)')
         # parser.add_argument('-ip3', required=False, metavar='<IP-Filter 3>', type=parse_range_ip_filter, help='instruction pointer filter range 3 (not supported in this version)')
-        parser.add_argument('--reproduce', action=FullPaths, type=parse_is_file, 
+        parser.add_argument('--reproduce', action=FullPaths, type=parse_is_file,
                             help='Path to the reproduce input.')
         parser.add_argument('--timeout', type=int, default=20,
                             help='Set fuzzing exectioin timeout')
@@ -255,6 +255,7 @@ class FuzzerConfiguration:
                             help='range of bytes to skip during deterministic fuzzing stages (0-128KB).',
                             action='append')
         parser.add_argument('--verbose', default=False, action='store_true')
+        parser.add_argument('--gdb', default=False, action='store_true')
         parser.add_argument('-e', required=False, help='disable evaluation mode.', action='store_false', default=True)
         # parser.add_argument('-S', required=False, metavar='Snapshot', help='specifiy snapshot title (default: kafl).', default="kafl", type=str)
         parser.add_argument('-D', required=False, help='skip deterministic stages (dumb mode).',action='store_false', default=True)

@@ -35,3 +35,4 @@ rm -rf $work/tmp_conc_*
 
 # Run fuzzing
 python3 fuzzer/drifuzz.py --Purge --concolic $cnp -D -p $np $seed $work $target 
+stty sane

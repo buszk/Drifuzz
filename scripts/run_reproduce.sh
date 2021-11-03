@@ -13,4 +13,5 @@ rm -rf $work
 mkdir -p $work
 cp ~/Workspace/git/drifuzz-concolic/work/$target/$target.sav $work/globalmodule.json
 
-python3 fuzzer/reproduce.py --Purge --reproduce $input seed/seed $work $target
+python3 fuzzer/reproduce.py --Purge --reproduce $input seed/seed-random $work $target
+stty sane

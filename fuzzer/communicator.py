@@ -18,7 +18,7 @@ bitmap_size = 65536
 
 class SocketThread (threading.Thread):
     model: Model = None
-    
+
     def __init__(self, addrses):
         threading.Thread.__init__(self)
         self.address = addrses
@@ -93,15 +93,13 @@ class SocketThread (threading.Thread):
                 except ConnectionResetError as e:
                     if self.stopped():
                         return
-                    print(f"last_command={last_command}", file=sys.stderr)
-                    print("ConnectionResetError", file=sys.stderr)
+                    log_slave(f"last_command={last_command}", self.model.slave.slave_id)
                     log_slave("ConnectionResetError", self.model.slave.slave_id)
                     break
                 except OSError as e:
                     if self.stopped():
                         return
                     log_slave("OSError", self.model.slave.slave_id)
-                    print("==========", file=sys.stderr)
                     print(f"address={self.address}", file=sys.stderr)
                     print(f"last_command={last_command}", file=sys.stderr)
                     print(e, file=sys.stderr)
@@ -112,7 +110,7 @@ class SocketThread (threading.Thread):
             log_slave("connection dropped", self.model.slave.slave_id)
         sock.close()
         sock = None
-                
+
     def stop(self):
         self._stop_event.set()
 
@@ -123,7 +121,7 @@ class SocketThread (threading.Thread):
 class Communicator:
     models: [Model] = []
     socks: [SocketThread] = []
-    
+
     def __init__(self, num_processes=1, concolic_thread=0):
         self.num_processes = num_processes
         uuid = shortuuid.uuid()
@@ -132,7 +130,7 @@ class Communicator:
         self.sizes = [(100 << 10), (100 << 10), bitmap_size]
         self.tmp_shm = [{}, {}, {}]
         self.tasks_per_requests = 1
-        
+
         self.to_update_queue = multiprocessing.Queue()
         self.to_master_queue = multiprocessing.Queue()
         self.to_modelserver_queue = multiprocessing.Queue()
@@ -156,7 +154,7 @@ class Communicator:
             self.to_slave_queues.append(multiprocessing.Queue())
             self.to_slave_queues[i].cancel_join_thread()
             self.socks.append(SocketThread(self.qemu_socket_prefix + str(i)))
-        
+
         for i in range(concolic_thread):
             self.to_slave_queues.append(multiprocessing.Queue())
             self.to_slave_queues[i].cancel_join_thread()
@@ -222,7 +220,7 @@ class Communicator:
     def start(self):
         for sock in self.socks:
             sock.start()
-    
+
     def stop(self):
         for sock in self.socks:
             sock.stop()

@@ -15,4 +15,4 @@ echo "seed directory: $seed"
 
 # Run fuzzing
 python3 fuzzer/drifuzz.py --Purge -D -p 20 $seed $work $target 
- 
+ stty sane

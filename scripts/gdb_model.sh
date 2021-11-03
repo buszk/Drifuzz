@@ -1,17 +1,14 @@
 #!/bin/bash
 
-if [ $# != 1 ];then 
+if [ $# != 1 ];then
     echo "Usage: $0 <target>"
     exit 1
 fi
 
 target=$1
 work=work/work-$target-model
-seed=seed/seed-$target
-np=$(nproc)
-np=$(($np/2))
+seed=seed-$target
 
-echo "$np Processes"
 echo "target: $target"
 echo "work directory: $work"
 echo "seed directory: $seed"
@@ -27,5 +24,5 @@ mkdir -p $seed
 cp ~/Workspace/git/drifuzz-concolic/work/$target/out/0 $seed
 
 # Run fuzzing
-python3 fuzzer/drifuzz.py -D -p $np $seed $work $target 
+python3 fuzzer/drifuzz.py --gdb -D -p 1 $seed $work $target
 stty sane

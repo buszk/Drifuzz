@@ -56,7 +56,7 @@ class SlaveThread(threading.Thread):
         self.bitmap_filename = self.comm.files[2] + str(self.slave_id)
         self.comm.slave_locks_bitmap[self.slave_id].acquire()
         self._qemu_ready = False
-    
+
         self.reproduce = self.config.argument_values['reproduce']
 
         self.globalmodel = None
@@ -68,14 +68,14 @@ class SlaveThread(threading.Thread):
             self.comm.concolic_locks[self.slave_id].acquire()
             log_slave("concolic locked", self.slave_id)
 
-        
+
 
     def __del__(self):
         if self.global_bitmap:
             self.global_bitmap.close()
 
     def exit_if_reproduce(self):
-        if self.reproduce and self.reproduce != "":
+        if self.reproduce:
             print("Reproducing case. Stop here")
             self.stop()
             self.comm.stop()
@@ -85,11 +85,14 @@ class SlaveThread(threading.Thread):
     def start_vm(self):
         v = False
         g = False
-        if self.reproduce and self.reproduce != "":
+        if self.reproduce:
+            v = True
+        elif self.config.argument_values['gdb']:
+            g = True
             v = True
         elif self.config.argument_values['verbose']:
             v = True
-            g = True
+
 
         self._qemu_ready = False
         while not self._qemu_ready:
@@ -103,7 +106,7 @@ class SlaveThread(threading.Thread):
                 time.sleep(1)
                 if self._qemu_ready:
                     break
-    
+
     def restart_vm(self, reuse=False):
         log_slave(f"restarting vm reuse={reuse}", self.slave_id)
 
@@ -113,7 +116,7 @@ class SlaveThread(threading.Thread):
         # Consume the idx_sem if it is released
         self.idx_sem.acquire(blocking=False)
 
-        # Avoid blocking socket thread 
+        # Avoid blocking socket thread
         # let the slave thread to start vm.
         send_msg(DRIFUZZ_START_QEMU, None, self.comm.to_slave_queues[self.slave_id])
 
@@ -135,7 +138,7 @@ class SlaveThread(threading.Thread):
         shm_fs.seek(0)
         payload_len = struct.unpack('<I', shm_fs.read(4))[0]
         # print('payload len:', payload_len)
-        self.payload = shm_fs.read(payload_len) 
+        self.payload = shm_fs.read(payload_len)
         # print(self.state)
         assert(self.state == SlaveState.WAITING)
         if imported:
@@ -155,7 +158,7 @@ class SlaveThread(threading.Thread):
         self.state = SlaveState.PROC_BITMAP
         log_slave(f"release payload in __respond_bitmap_req", self.slave_id)
         self.payload_sem.release()
-            
+
     def open_global_bitmap(self):
         self.global_bitmap_fd = os.open(self.config.argument_values['work_dir'] + "/bitmap", os.O_RDWR | os.O_SYNC | os.O_CREAT)
         os.ftruncate(self.global_bitmap_fd, self.bitmap_size)
@@ -175,7 +178,7 @@ class SlaveThread(threading.Thread):
                 if ((bitmap[i] | self.global_bitmap[i]) != self.global_bitmap[i]):
                     return True
         return False
-    
+
     def check_covered_bytes(self, bitmap):
         result = 0
         global_cnt = 0
@@ -184,7 +187,7 @@ class SlaveThread(threading.Thread):
                 result += 1
             if self.global_bitmap[i] != 0:
                 global_cnt += 1
-            
+
         log_slave('bitmap covers %d bytes; global bitmap covers %d bytes' % (result, global_cnt), self.slave_id)
 
     def lock_concolic_thread(self):
@@ -245,7 +248,9 @@ class SlaveThread(threading.Thread):
             # Notify mapserver the result
             send_msg(tag, [result], self.comm.to_mapserver_queue, source=self.slave_id)
             # Wait for mapserver to finish
-            self.comm.slave_locks_bitmap[self.slave_id].acquire()
+            while not self.stopped():
+                if self.comm.slave_locks_bitmap[self.slave_id].acquire(timeout=0.1):
+                    break
             # Acquire concolic lock before asking master for payload
             # Prevent master from sending out a payload that is never processed,
             # May cause starvation because concolic thread is busy
@@ -258,12 +263,12 @@ class SlaveThread(threading.Thread):
     def fetch_payload(self):
         if self.stopped():
             return None
-        
+
         if not self.vm_ready:
             self.vm_ready = True
             send_msg(KAFL_TAG_START, self.q.qemu_id, self.comm.to_master_queue, source=self.slave_id)
-            
-        if self.reproduce and self.reproduce != "":
+
+        if self.reproduce:
             with open(self.reproduce, 'rb') as infile:
                 return infile.read()
 
@@ -293,10 +298,10 @@ class SlaveThread(threading.Thread):
                 return self.idx
             else:
                 log_slave('Req read index: timeout', self.slave_id)
-                print(key, " ", size, " ", cnt)
+                # print(key, " ", size, " ", cnt)
                 # self.stop()
                 return 0
-    
+
     def req_dma_idx(self, key, size, cnt):
         if self.globalmodel:
             return self.globalmodel.get_dma_idx(key, size, cnt)
@@ -312,8 +317,8 @@ class SlaveThread(threading.Thread):
                 log_slave('Req dma index: timeout', self.slave_id)
                 # self.stop()
                 return 0
-        
-    
+
+
     def interprocess_proto_handler(self):
         response = recv_msg(self.comm.to_slave_queues[self.slave_id], timeout=0.1)
         if response is None:
@@ -335,7 +340,7 @@ class SlaveThread(threading.Thread):
             self.__respond_sampling_req(response)
 
         elif response.tag == KAFL_TAG_REQ_BENCHMARK:
-            self.__respond_benchmark_req(response)  
+            self.__respond_benchmark_req(response)
 
         elif response.tag == DRIFUZZ_REQ_READ_IDX or \
              response.tag == DRIFUZZ_REQ_DMA_IDX:
@@ -371,7 +376,7 @@ class SlaveThread(threading.Thread):
             self.interprocess_proto_handler()
             #except:
             #    return
-            
+
 
     def run(self):
         self.loop()
@@ -379,8 +384,8 @@ class SlaveThread(threading.Thread):
     def stop(self):
         self.q.__del__()
         self._stop_event.set()
-        
+
     def stopped(self):
         return self._stop_event.is_set()
 
-            
+

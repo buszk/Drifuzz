@@ -1,12 +1,12 @@
 #!/bin/bash
 
-if [ $# != 1 ];then 
+if [ $# != 1 ];then
     echo "Usage: $0 <target>"
     exit 1
 fi
 
 target=$1
-work=work-$target-model
+work=work/work-$target-model
 seed=seed-$target
 
 echo "target: $target"
@@ -24,4 +24,5 @@ mkdir -p $seed
 cp ~/Workspace/git/drifuzz-concolic/work/$target/out/0 $seed
 
 # Run fuzzing
-python3 fuzzer/drifuzz.py --verbose -D -p 1 $seed $work $target 
+python3 fuzzer/drifuzz.py --verbose -D -p 1 $seed $work $target
+stty sane

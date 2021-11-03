@@ -14,3 +14,4 @@ while [[ $i -lt 1000 ]]; do
         break
     fi
 done
+stty sane

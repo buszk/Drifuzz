@@ -43,3 +43,4 @@ cp ~/Workspace/git/drifuzz-concolic/work/$target/out/0 $seed
 
 # Run fuzzing
 python3 fuzzer/drifuzz.py --concolic 1 -D -p $np $seed $work $target
+stty sane

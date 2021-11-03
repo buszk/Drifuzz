@@ -69,7 +69,9 @@ def main():
         config.load_data()
         reload = True
 
-    DO_USE_UI = (USE_UI and not config.argument_values['verbose'] and
+    DO_USE_UI = (USE_UI and
+                not config.argument_values['verbose'] and
+                not config.argument_values['gdb'] and
                 config.argument_values['f'])
     comm = Communicator(num_processes = num_processes, concolic_thread=num_concolic)
     master = MasterProcess(comm, reload=reload)
@@ -87,7 +89,8 @@ def main():
         slaves.append(controller)
         concolic_models.append(controller.model)
 
-    concserv = ConcolicServerThread(comm, num_processes, num_concolic, concolic_models)
+    if num_concolic > 0:
+        concserv = ConcolicServerThread(comm, num_processes, num_concolic, concolic_models)
 
     comm.start()
     comm.create_shm()
@@ -97,11 +100,12 @@ def main():
 
     mapserver_process.start()
     modelserver_process.start()
-    concserv.start()
+    if num_concolic > 0:
+        concserv.start()
 
     for slave in slaves:
         slave.start()
-    
+
 
     # print('Starting master loop')
     try:
@@ -110,19 +114,30 @@ def main():
         master.stop()
         print('Saving data')
         # Wait for child processes to properly exit
-        mapserver_process.join()
+        print('Waiting for updater to stop')
         update_process.join()
-        concserv.stop()
-        
+        print('Waiting for model server to stop')
+        modelserver_process.join()
+
+        if num_concolic > 0:
+            print('Waiting for concolic server to stop')
+            concserv.stop()
+
         # Properly stop threads
+        print('Stop QEMU workers')
         for slave in slaves:
             slave.stop()
         time.sleep(1)
         # Stop communicator last because Queues may be in used
+        print('Stop communicator and SocketThread')
         comm.stop()
+
+        print('Waiting for map server to stop')
+        mapserver_process.join()
+
         master.save_data()
         print('Data saved')
-        
+
 
 
 if __name__ == "__main__":
