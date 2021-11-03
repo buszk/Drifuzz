@@ -1,0 +1,82 @@
+diff --git a/image/Makefile b/image/Makefile
+index 6e4415ae5..0e24e6d83 100644
+--- a/image/Makefile
++++ b/image/Makefile
+@@ -2,7 +2,7 @@
+ all: driver-main
+ 
+ %:%.c
+-	gcc -g -o $@ $<
++	gcc -g -static -o $@ $<
+ 
+ clean:
+ 	rm -f driver-main
+diff --git a/linux/arch/x86/entry/Makefile b/linux/arch/x86/entry/Makefile
+index 06fc70cf5..abb6d2d40 100644
+--- a/linux/arch/x86/entry/Makefile
++++ b/linux/arch/x86/entry/Makefile
+@@ -7,11 +7,12 @@ OBJECT_FILES_NON_STANDARD_entry_64_compat.o := y
+ 
+ CFLAGS_syscall_64.o		+= $(call cc-option,-Wno-override-init,)
+ CFLAGS_syscall_32.o		+= $(call cc-option,-Wno-override-init,)
+-obj-y				:= entry_$(BITS).o thunk_$(BITS).o syscall_$(BITS).o
++obj-y				:= entry_$(BITS).o syscall_$(BITS).o
+ obj-y				+= common.o
+ 
+ obj-y				+= vdso/
+ obj-y				+= vsyscall/
+ 
++obj-$(CONFIG_PREEMPTION)	+= thunk_$(BITS).o 
+ obj-$(CONFIG_IA32_EMULATION)	+= entry_64_compat.o syscall_32.o
+ 
+diff --git a/linux/arch/x86/entry/thunk_32.S b/linux/arch/x86/entry/thunk_32.S
+index e010d4ae1..49e966aa9 100644
+--- a/linux/arch/x86/entry/thunk_32.S
++++ b/linux/arch/x86/entry/thunk_32.S
+@@ -34,10 +34,8 @@ SYM_CODE_END(\name)
+ 	THUNK trace_hardirqs_off_thunk,trace_hardirqs_off_caller,1
+ #endif
+ 
+-#ifdef CONFIG_PREEMPTION
+ 	THUNK ___preempt_schedule, preempt_schedule
+ 	THUNK ___preempt_schedule_notrace, preempt_schedule_notrace
+ 	EXPORT_SYMBOL(___preempt_schedule)
+ 	EXPORT_SYMBOL(___preempt_schedule_notrace)
+-#endif
+ 
+diff --git a/linux/arch/x86/entry/thunk_64.S b/linux/arch/x86/entry/thunk_64.S
+index c5c3b6e86..e3142e32c 100644
+--- a/linux/arch/x86/entry/thunk_64.S
++++ b/linux/arch/x86/entry/thunk_64.S
+@@ -46,16 +46,13 @@ SYM_FUNC_END(\name)
+ 	THUNK lockdep_sys_exit_thunk,lockdep_sys_exit
+ #endif
+ 
+-#ifdef CONFIG_PREEMPTION
+ 	THUNK ___preempt_schedule, preempt_schedule
+ 	THUNK ___preempt_schedule_notrace, preempt_schedule_notrace
+ 	EXPORT_SYMBOL(___preempt_schedule)
+ 	EXPORT_SYMBOL(___preempt_schedule_notrace)
+-#endif
+ 
+ #if defined(CONFIG_TRACE_IRQFLAGS) \
+- || defined(CONFIG_DEBUG_LOCK_ALLOC) \
+- || defined(CONFIG_PREEMPTION)
++ || defined(CONFIG_DEBUG_LOCK_ALLOC)
+ SYM_CODE_START_LOCAL_NOALIGN(.L_restore)
+ 	popq %r11
+ 	popq %r10
+diff --git a/linux/arch/x86/um/Makefile b/linux/arch/x86/um/Makefile
+index 33c51c064..acd50169c 100644
+--- a/linux/arch/x86/um/Makefile
++++ b/linux/arch/x86/um/Makefile
+@@ -26,7 +26,8 @@ else
+ 
+ obj-y += syscalls_64.o vdso/
+ 
+-subarch-y = ../lib/csum-partial_64.o ../lib/memcpy_64.o ../entry/thunk_64.o
++subarch-y = ../lib/csum-partial_64.o ../lib/memcpy_64.o
++subarch-$(CONFIG_PREEMPTION) +=  ../entry/thunk_64.o
+ 
+ endif
+ 
