@@ -1,0 +1,257 @@
+diff --git a/fuzzer/common/ui.py b/fuzzer/common/ui.py
+index 0e5389b9f..02b25c9b2 100644
+--- a/fuzzer/common/ui.py
++++ b/fuzzer/common/ui.py
+@@ -68,7 +68,7 @@ class FuzzerUI():
+             self.LBEDGE = '+'
+             self.RBEDGE = '+'
+             self.HULINE = '+'
+-            self.HDLINE = '+'   
++            self.HDLINE = '+'
+             self.LTEDGE = '+'
+             self.RTEDGE = '+'
+ 
+@@ -452,7 +452,7 @@ class FuzzerUI():
+                     ret = "%.2f" % value
+                 elif value < 10:
+                     ret = "%.1f" % value
+-                elif value < 100:
++                else:
+                     ret = "%.0f" % value
+             else:
+                 raise
+diff --git a/fuzzer/communicator.py b/fuzzer/communicator.py
+index 6a7f96cec..112617231 100644
+--- a/fuzzer/communicator.py
++++ b/fuzzer/communicator.py
+@@ -127,9 +127,9 @@ class Communicator:
+         uuid = shortuuid.uuid()
+         self.files = [f"/dev/shm/drifuzz_master_{uuid}_", f"/dev/shm/drifuzz_mapserver_{uuid}_", f"/dev/shm/drifuzz_bitmap_{uuid}_"]
+         self.qemu_socket_prefix = f'/tmp/drifuzz_socket_{uuid}_'
++        self.tasks_per_requests = 8
+         self.sizes = [(100 << 10), (100 << 10), bitmap_size]
+         self.tmp_shm = [{}, {}, {}]
+-        self.tasks_per_requests = 1
+ 
+         self.to_update_queue = multiprocessing.Queue()
+         self.to_master_queue = multiprocessing.Queue()
+@@ -201,7 +201,8 @@ class Communicator:
+         for j in range(len(self.files)):
+             for i in range(self.num_processes):
+                 shm_f = os.open(self.files[j]+str(i), os.O_CREAT | os.O_RDWR | os.O_SYNC)
+-                os.ftruncate(shm_f, self.sizes[j]*self.tasks_per_requests)
++                size = self.sizes[j] if j == 2 else self.sizes[j]*self.tasks_per_requests
++                os.ftruncate(shm_f, size)
+                 os.close(shm_f)
+ 
+     def __get_shm(self, type_id, slave_id):
+@@ -209,7 +210,8 @@ class Communicator:
+             shm = self.tmp_shm[type_id][slave_id]
+         else:
+             shm_fd = os.open(self.files[type_id] + str(slave_id), os.O_RDWR | os.O_SYNC)
+-            shm = mmap.mmap(shm_fd, self.sizes[type_id]*self.tasks_per_requests, mmap.MAP_SHARED, mmap.PROT_WRITE | mmap.PROT_READ)
++            size = self.sizes[type_id] if type_id == 2 else self.sizes[type_id]*self.tasks_per_requests
++            shm = mmap.mmap(shm_fd, size, mmap.MAP_SHARED, mmap.PROT_WRITE | mmap.PROT_READ)
+             self.tmp_shm[type_id][slave_id] = shm
+         return shm
+ 
+diff --git a/fuzzer/drifuzz.ini b/fuzzer/drifuzz.ini
+index a71b04ef9..bedc847f3 100644
+--- a/fuzzer/drifuzz.ini
++++ b/fuzzer/drifuzz.ini
+@@ -3,8 +3,10 @@ UI_REFRESH_RATE:        0.15
+ MASTER_SHM_PREFIX:      drifuzz_master_
+ MAPSERV_SHM_PREFIX:     drifuzz_mapserver_
+ BITMAP_SHM_PREFIX:      drifuzz_bitmap_
+-PAYLOAD_SHM_SIZE:       66560
+-BITMAP_SHM_SIZE:	    65536
++#PAYLOAD_SHM_SIZE:       66560
++PAYLOAD_SHM_SIZE:       266240
++#BITMAP_SHM_SIZE:	    65536
++BITMAP_SHM_SIZE:	    262144
+ #BITMAP_SHM_SIZE:		32768
+ #BITMAP_SHM_SIZE:		131072
+ #BITMAP_SHM_SIZE:		262144
+diff --git a/fuzzer/process/master.py b/fuzzer/process/master.py
+index 37259a002..3cd04eaf9 100644
+--- a/fuzzer/process/master.py
++++ b/fuzzer/process/master.py
+@@ -270,8 +270,11 @@ class MasterProcess:
+         fs_shm.seek(0)
+         assert len(tasks) > 0
+         # input_len = to_string_32(len(tasks[i]))
+-        fs_shm.write(struct.pack('<I', len(tasks[0])))
+-        fs_shm.write(tasks[0])
++
++        for i in range(len(tasks)):
++            fs_shm.seek(size * i)
++            fs_shm.write(struct.pack('<I', len(tasks[i])))
++            fs_shm.write(tasks[i])
+         if self.byte_map:
+             data = self.byte_map
+         else:
+diff --git a/fuzzer/process/qemu.py b/fuzzer/process/qemu.py
+index f84bdf5c2..989cf9cbc 100644
+--- a/fuzzer/process/qemu.py
++++ b/fuzzer/process/qemu.py
+@@ -179,7 +179,7 @@ class qemu:
+ 
+     def init(self):
+         self.kafl_shm_f     = os.open(self.bitmap_filename, os.O_RDWR | os.O_SYNC | os.O_CREAT)
+-        os.ftruncate(self.kafl_shm_f, self.bitmap_size)
++        # os.ftruncate(self.kafl_shm_f, self.bitmap_size)
+ 
+         self.kafl_shm       = mmap.mmap(self.kafl_shm_f, self.bitmap_size, mmap.MAP_SHARED, mmap.PROT_WRITE | mmap.PROT_READ)
+         os.close(self.kafl_shm_f)
+diff --git a/fuzzer/process/slave.py b/fuzzer/process/slave.py
+index 7a3219591..d98c00417 100644
+--- a/fuzzer/process/slave.py
++++ b/fuzzer/process/slave.py
+@@ -47,8 +47,10 @@ class SlaveThread(threading.Thread):
+         self.model = Model(self)
+         self.comm.register_model(self.slave_id, self.model)
+         self.state = SlaveState.WAITING
++        self.payloads = []
+         self.payload_sem = threading.BoundedSemaphore(value=1)
+         self.payload_sem.acquire()
++        self.payload_ack = threading.BoundedSemaphore(value=1)
+         self.idx_sem = threading.BoundedSemaphore(value=1)
+         self.idx_sem.acquire()
+         self._stop_event = threading.Event()
+@@ -56,6 +58,7 @@ class SlaveThread(threading.Thread):
+         self.bitmap_filename = self.comm.files[2] + str(self.slave_id)
+         self.comm.slave_locks_bitmap[self.slave_id].acquire()
+         self._qemu_ready = False
++        self.last = True
+ 
+         self.reproduce = self.config.argument_values['reproduce']
+ 
+@@ -125,38 +128,47 @@ class SlaveThread(threading.Thread):
+         # Reuse self.payload
+         if reuse:
+             log_slave(f"release payload in restart_vm", self.slave_id)
+-            self.payload_sem.acquire(blocking=False)
+-            self.payload_sem.release()
++            self.payloads.append(self.payload)
++            # self.payload_sem.acquire(blocking=False)
++            # self.payload_sem.release()
+         return True
+ 
+     def __respond_job_req(self, response, imported=False):
+         # if self.state != SlaveState.WAITING:
+         #     print("Error: slave is not waiting for input")
+         #     return
+-        self.affected_bytes = response.data
+-        shm_fs = self.comm.get_master_payload_shm(self.slave_id)
+-        shm_fs.seek(0)
+-        payload_len = struct.unpack('<I', shm_fs.read(4))[0]
+-        # print('payload len:', payload_len)
+-        self.payload = shm_fs.read(payload_len)
+-        # print(self.state)
+         assert(self.state == SlaveState.WAITING)
++        self.payload_ack.acquire()
++        self.payloads = []
++        for i in range(len(response.data)):
++            self.affected_bytes = response.data
++            shm_fs = self.comm.get_master_payload_shm(self.slave_id)
++            shm_fs.seek(i * self.comm.get_master_payload_shm_size())
++            payload_len = struct.unpack('<I', shm_fs.read(4))[0]
++            # print('payload len:', payload_len)
++            self.payload = shm_fs.read(payload_len)
++            self.payloads.append(self.payload)
++            # print(self.state)
+         if imported:
+             self.state = SlaveState.PROC_IMPORT
+         else:
+             self.state = SlaveState.PROC_TASK
+-        log_slave(f"release payload in __respond_job_req", self.slave_id)
++        assert len(self.payloads) > 0
++        log_slave(f"release {len(self.payloads)} payload in __respond_job_req", self.slave_id)
+         self.payload_sem.release()
+-        # Todo one payload each time?
++            # Todo one payload each time?
+ 
+     def __respond_bitmap_req(self, response):
+         # if self.state != SlaveState.WAITING:
+         #     print("Error: slave is not waiting for input")
+         #     return
++        self.payload_ack.acquire()
+         self.payload = response.data
++        self.payloads = []
++        self.payloads.append(self.payload)
+         assert(self.state == SlaveState.WAITING)
+         self.state = SlaveState.PROC_BITMAP
+-        log_slave(f"release payload in __respond_bitmap_req", self.slave_id)
++        log_slave(f"release 1 payload in __respond_bitmap_req", self.slave_id)
+         self.payload_sem.release()
+ 
+     def open_global_bitmap(self):
+@@ -214,10 +226,12 @@ class SlaveThread(threading.Thread):
+         self.unlock_concolic_thread()
+ 
+         if self.state == SlaveState.PROC_BITMAP:
++            self.last = False
+             self.state = SlaveState.WAITING
+             bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
+             bitmap_shm.seek(0)
+             bitmap = bitmap_shm.read(self.bitmap_size)
++            assert len(bitmap) == self.bitmap_size
+             self.lock_concolic_thread()
+             # Reply master's BITMAP cmd
+             send_msg(KAFL_TAG_REQ_BITMAP, bitmap, self.comm.to_master_queue, source = self.slave_id)
+@@ -229,7 +243,6 @@ class SlaveThread(threading.Thread):
+         elif self.state == SlaveState.PROC_TASK or \
+             self.state == SlaveState.PROC_IMPORT:
+             tag = KAFL_TAG_RESULT if self.state == SlaveState.PROC_TASK else DRIFUZZ_CONC_BITMAP
+-            self.state = SlaveState.WAITING
+             bitmap_shm = self.comm.get_bitmap_shm(self.slave_id)
+             bitmap_shm.seek(0)
+             bitmap = bitmap_shm.read(self.bitmap_size)
+@@ -256,11 +269,15 @@ class SlaveThread(threading.Thread):
+             # May cause starvation because concolic thread is busy
+             self.lock_concolic_thread()
+             # Ask master for new payloads
+-            send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
++            if len(self.payloads) == 0:
++                self.state = SlaveState.WAITING
++                print("Last input was executed. requesting more")
++                send_msg(KAFL_TAG_REQ, str(self.slave_id), self.comm.to_master_queue, source = self.slave_id)
+         else:
+             log_slave("Error: slave thread in wrong state", self.slave_id)
+ 
+     def fetch_payload(self):
++        log_slave(f"pre fetch: {len(self.payloads)}", self.slave_id)
+         if self.stopped():
+             return None
+ 
+@@ -272,16 +289,28 @@ class SlaveThread(threading.Thread):
+             with open(self.reproduce, 'rb') as infile:
+                 return infile.read()
+ 
++        if len(self.payloads) == 1:
++            self.last = True
++
++        if len(self.payloads) > 0:
++            payload = self.payloads[len(self.payloads)-1]
++            self.payloads.pop()
++            self.start_time = time.time()
++            return payload
++        self.payload_ack.acquire(blocking=False)
++        self.payload_ack.release()
+         while not self.stopped():
+             if self.payload_sem.acquire(timeout=0.1):
+                 break
+         else:
+             return None
+-        payload = self.payload
++        log_slave(f"fetch_payload {len(self.payloads)}", self.slave_id)
++        assert len(self.payloads) > 0
++        payload = self.payloads[len(self.payloads)-1]
++        self.payloads.pop()
+         # print(len(payload))
+         assert(self.state != SlaveState.WAITING)
+         self.start_time = time.time()
+-        log_slave("fetch_payload", self.slave_id)
+         return payload
+ 
+     def req_read_idx(self, key, size, cnt):
