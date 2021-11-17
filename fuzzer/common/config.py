@@ -233,7 +233,7 @@ class FuzzerConfiguration:
         # parser.add_argument('-ip3', required=False, metavar='<IP-Filter 3>', type=parse_range_ip_filter, help='instruction pointer filter range 3 (not supported in this version)')
         parser.add_argument('--reproduce', action=FullPaths, type=parse_is_file,
                             help='Path to the reproduce input.')
-        parser.add_argument('--timeout', type=int, default=20,
+        parser.add_argument('--timeout', type=int, default=40,
                             help='Set fuzzing exectioin timeout')
         parser.add_argument('--concolic', default=0, type=int,
                             help='number of concolic threads')

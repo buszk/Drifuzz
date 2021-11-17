@@ -367,15 +367,10 @@ class MasterProcess:
             for payload in payloads:
                 bitmap = self.__request_bitmap(payload)
                 data.append((payload, bitmap))
+            log_master('KAFL_INIT_BITMAP')
             send_msg(KAFL_INIT_BITMAP, data, self.comm.to_mapserver_queue)
             self.payload = payloads[0]
-        # self.payload = read_binary_file('./random_seed')
-        # print('master requesting bitmap')
-        # bitmap = self.__request_bitmap(self.payload)
-        # print('master got bitmap')
-        # data = [(self.payload, bitmap)]
-        # send_msg(KAFL_INIT_BITMAP, data, self.comm.to_mapserver_queue)
-        # print('init fuzzing loop finish')
+        log_master('init fuzzing loop finish')
 
     def __calc_stage_iterations(self):
         self.kafl_state.progress_bitflip = 0
