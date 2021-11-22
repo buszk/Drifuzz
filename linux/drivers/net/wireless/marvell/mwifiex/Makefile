@@ -14,6 +14,8 @@
 # ARE EXPRESSLY DISCLAIMED.  The License provides additional details about
 # this warranty disclaimer.
 
+KCOV_INSTRUMENT := y
+ccflags-y += -fno-reorder-functions
 
 mwifiex-y += main.o
 mwifiex-y += init.o

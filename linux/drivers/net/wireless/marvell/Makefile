@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0-only
+ccflags-y += -fno-omit-frame-pointer
+ccflags-y += -fno-reorder-functions
 obj-$(CONFIG_LIBERTAS)		+= libertas/
 
 obj-$(CONFIG_LIBERTAS_THINFIRM)	+= libertas_tf/
