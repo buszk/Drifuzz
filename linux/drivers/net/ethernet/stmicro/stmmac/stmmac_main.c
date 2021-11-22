@@ -3570,14 +3570,17 @@ static unsigned int stmmac_rx_buf1_len(struct stmmac_priv *priv,
 	ret = stmmac_get_rx_header_len(priv, p, &hlen);
 	if (priv->sph && hlen) {
 		priv->xstats.rx_split_hdr_pkt_n++;
+		printk(KERN_INFO "hlen %x\n", hlen);
 		return hlen;
 	}
 
 	/* First descriptor, not last descriptor and not split header */
-	if (status & rx_not_ls)
+	if (status & rx_not_ls) 
 		return priv->dma_buf_sz;
 
 	plen = stmmac_get_rx_frame_len(priv, p, coe);
+	printk(KERN_INFO "plen %x\n", plen);
+	printk(KERN_INFO "dma_buf_sz %x\n", priv->dma_buf_sz);
 
 	/* First descriptor and last descriptor and not split header */
 	return min_t(unsigned int, priv->dma_buf_sz, plen);
@@ -3708,6 +3711,7 @@ read_again:
 		if (buf->sec_page)
 			prefetch(page_address(buf->sec_page));
 
+		printk(KERN_INFO "len: %x\n", len);
 		buf1_len = stmmac_rx_buf1_len(priv, p, status, len);
 		len += buf1_len;
 		buf2_len = stmmac_rx_buf2_len(priv, p, status, len);
@@ -3725,12 +3729,14 @@ read_again:
 		     unlikely(status != llc_snap))) {
 			if (buf2_len)
 				buf2_len -= ETH_FCS_LEN;
-			else
+			else if (buf1_len)
 				buf1_len -= ETH_FCS_LEN;
 
 			len -= ETH_FCS_LEN;
 		}
 
+		printk(KERN_INFO "buf1_len: %x\n", buf1_len);
+		printk(KERN_INFO "buf2_len: %x\n", buf2_len);
 		if (!skb) {
 			skb = napi_alloc_skb(&ch->rx_napi, buf1_len);
 			if (!skb) {
