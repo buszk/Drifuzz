@@ -452,7 +452,7 @@ class FuzzerUI():
                     ret = "%.2f" % value
                 elif value < 10:
                     ret = "%.1f" % value
-                elif value < 100:
+                else:
                     ret = "%.0f" % value
             else:
                 raise

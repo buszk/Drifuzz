@@ -18,7 +18,7 @@ echo "target: $target"
 echo "work directory: $work"
 echo "seed directory: $seed"
 
-if [ ! -f ~/Workspace/git/drifuzz-concolic/work/$target/$target.qcow2 ]; then
+if [ ! -f ../drifuzz-concolic/work/$target/$target.qcow2 ]; then
     echo "Cannot run concolic script because concolic image for $target isn't setup"
     echo "Go to drifuzz-concolic directory and run:"
     echo "  ./snapshot_helper.py $target"
@@ -27,8 +27,8 @@ fi
 
 for i in $(seq 0 $(($cnp-1))); do
     echo ${target}_${i}.qcow2
-    cp ~/Workspace/git/drifuzz-concolic/work/$target/$target.qcow2 \
-        ~/Workspace/git/drifuzz-concolic/work/$target/${target}_${i}.qcow2
+    cp ../drifuzz-concolic/work/$target/$target.qcow2 \
+        ../drifuzz-concolic/work/$target/${target}_${i}.qcow2
 done
 
 rm -rf $work/tmp_conc_*

@@ -27,7 +27,7 @@ import json
 import struct
 import lz4.block
 
-from communicator import send_msg, recv_msg, Communicator
+from communicator import send_msg, recv_msg, recv_tagged_msg, Communicator
 from protocol import *
 from state import MapserverState
 from tree import *
@@ -120,9 +120,10 @@ class MapserverProcess:
             self.load_data()
             self.treemap = KaflTree.load_data(enable_graphviz=self.enable_graphviz)
         else:
-            msg = recv_msg(self.comm.to_mapserver_queue)
+            msg = recv_tagged_msg(self.comm.to_mapserver_queue, KAFL_INIT_BITMAP)
             self.mapserver_state_obj.pending = len(msg.data)
             self.treemap = KaflTree(msg.data, enable_graphviz=self.enable_graphviz)
+            self.__init_bitmap_handler(msg)
 
     def __add_new_hash(self, new_hash, bitmap, payload, performance):
         """
@@ -280,6 +281,15 @@ class MapserverProcess:
             return True
         return False
 
+    def __init_bitmap_handler(self, request):
+        results = request.data
+        log_mapserver("__init_bitmap_handler: " + str(len(results)))
+        for (payload, bitmap) in results:
+            new_hash = mmh3.hash64(bitmap)
+            log_mapserver("bitmap hash: " + str(new_hash))
+            self.__check_hash(new_hash, bitmap, payload, False, False, False, 0, False, 0, 0, 0)
+
+
     def __result_tag_handler(self, request, imported=False):
         # self.comm.slave_locks_B[request.source].acquire()
         results = request.data
@@ -398,6 +408,7 @@ class MapserverProcess:
 
     def loop(self):
         skip_sync=False
+
         while True:
             if not skip_sync:
                 self.__sync_handler()
