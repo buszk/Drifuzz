@@ -1,4 +1,6 @@
 # SPDX-License-Identifier: GPL-2.0
+KCOV_INSTRUMENT := y
+ccflags-y += -fno-reorder-functions
 rsi_91x-y			+= rsi_91x_main.o
 rsi_91x-y			+= rsi_91x_core.o
 rsi_91x-y			+= rsi_91x_mac80211.o
