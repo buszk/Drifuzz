@@ -196,9 +196,8 @@ static inline uint64_t mix_bits(uint64_t v) {
 void notrace __sanitizer_cov_trace_pc(void)
 {
 	struct task_struct *t;
-	unsigned long *area;
+	unsigned char *area;
 	unsigned long ip = canonicalize_ip(_RET_IP_);
-	unsigned long pos;
 	unsigned int size;
 	unsigned long addr;
 	t = current;
@@ -352,7 +351,7 @@ static void kcov_start(struct task_struct *t, unsigned int size,
 	t->kcov_size = size;
 	t->kcov_area = area;
 	/* Driffuzz */
-	_kcov_size = size;
+	_kcov_size = size * sizeof(unsigned long);
 	_kcov_area = area;
 	_t = t;
 	/* See comment in check_kcov_mode(). */
