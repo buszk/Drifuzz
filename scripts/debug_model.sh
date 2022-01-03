@@ -1,5 +1,17 @@
 #!/bin/bash
 
+USB_ARG=
+while :; do
+    case $1 in
+        --usb)
+            USB_ARG=$1
+            shift
+        ;;
+        *)
+            break
+    esac
+done
+
 if [ $# != 1 ];then
     echo "Usage: $0 <target>"
     exit 1
@@ -24,5 +36,5 @@ mkdir -p $seed
 cp ../drifuzz-concolic/work/$target/out/0 $seed
 
 # Run fuzzing
-python3 fuzzer/drifuzz.py --verbose -D -p 1 $seed $work $target
+python3 fuzzer/drifuzz.py $USB_ARG --verbose -D -p 1 $seed $work $target
 stty sane
