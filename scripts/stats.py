@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+import sys
 import argparse
 import statistics
 from pathlib import Path
@@ -9,8 +10,12 @@ import scipy.stats as ss
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--result", type=str, default="/data/USER/drifuzz", help="The directory that holds the fuzzing results")
+parser.add_argument("--agamottoresult", type=str, default="/data/USER/agamotto", help="The directory that holds the fuzzing results")
 parser.add_argument("--target", default="all", help="The target(s) to generate graphs")
 # parser.add_argument("--out", type=Path, default=Path(__file__).parent.parent/"graphs", help="The output directory")
+parser.add_argument("--raw", default=False, action='store_true')
+parser.add_argument("--patched", default=False, action='store_true')
+parser.add_argument("--agamotto", default=False, action='store_true')
 
 args = parser.parse_args()
 
@@ -24,6 +29,14 @@ resultdir = Path(resultdir)
 assert resultdir.exists()
 
 
+agamotto_resultdir = args.agamottoresult
+if 'USER' in agamotto_resultdir:
+    agamotto_resultdir = agamotto_resultdir.replace('USER', os.environ.get('USER'))
+agamotto_resultdir = Path(agamotto_resultdir)
+assert agamotto_resultdir.exists()
+
+
+
 settings = [
     'random seed',
     'random seed +concolic',
@@ -32,6 +45,19 @@ settings = [
 ]
 # ["Random Fuzzing", "Concolic", "Golden-seed", "Golden-seed Concolic"]
 target_means = {}
+
+def statistic_significance(pvalue):
+    if pvalue < 0.0001:
+        return '****'
+    elif pvalue < 0.001:
+        return ' ***'
+    elif pvalue < 0.01:
+        return '  **'
+    elif pvalue < 0.05:
+        return '   *'
+    else:
+        return '    '
+
 
 def coverage_result(target, modeled, concolic):
     def inner_dirname():
@@ -50,10 +76,15 @@ def coverage_result(target, modeled, concolic):
         with open(bitmap_file, 'rb') as f:
             bs = f.read()
             cov= 0
-            for i in range(int(len(bs)/8)):
-                s = bs[i*8:i*8+8]
-                if s != b'\x00\x00\x00\x00\x00\x00\x00\x00':
-                    cov += 1
+            if args.patched:
+                for i in range(int(len(bs)/8)):
+                    s = bs[i*8:i*8+8]
+                    if s != b'\x00\x00\x00\x00\x00\x00\x00\x00':
+                        cov += 1
+            else:
+                for i in range(len(bs)):
+                    if bs[i] != 0:
+                        cov += 1
             results.append(cov)
     return results
 
@@ -61,7 +92,7 @@ def compare(data, t, c ):
     # print(data[t])
     # print(data[c])
     pvalue = ss.mannwhitneyu(data[t], data[c], alternative="greater").pvalue
-    print(f"{settings[t]} vs {settings[c]}: p-value {round(pvalue, 4)}")
+    print(f"{settings[t]} vs {settings[c]}: significance {statistic_significance(pvalue)} ;p-value {round(pvalue, 4)}")
 
     # print(ss.mannwhitneyu(data[t], data[c], alternative="greater").pvalue)
 
@@ -83,6 +114,47 @@ def stat_one(target):
 
     target_means[target] = mean_ratio
 
+agamotto_alias = {
+    '8139cp': 'rtl8139',
+    'atlantic': 'aqc100',
+    'stmmac_pci': 'quark',
+}
+
+def parse_agamotto(target):
+    if target in agamotto_alias:
+        target = agamotto_alias[target]
+    covers = []
+    for x in agamotto_resultdir.glob(f"{target}-*"):
+        log_file = x / f"{target}.log"
+        max_cover = 0
+        with open(log_file) as l:
+            for line in l:
+                if 'covers' not in line:
+                    continue
+                sp = line.split(' ')
+                if len(sp) != 4:
+                    continue
+                cover = int(sp[2])
+                max_cover = max(cover, max_cover)
+        covers.append(max_cover)
+    print(covers)
+    return covers
+
+def compare_agamotto(target):
+    print(target)
+    drifuzz_result = coverage_result(target, True, True)
+    agamotto_result = parse_agamotto(target)
+    mean_ratio = statistics.mean(drifuzz_result) / statistics.mean(agamotto_result)
+    print(f"Coverage increase {round((mean_ratio-1)*100,1)}%")
+    pvalue = ss.mannwhitneyu(drifuzz_result, agamotto_result, alternative="greater").pvalue
+    print(f"significance {statistic_significance(pvalue)} p-value {round(pvalue, 4)}")
+
+if args.agamotto:
+    drivers = ["8139cp", "atlantic", "stmmac_pci", "snic"]
+    for t in drivers:
+        compare_agamotto(t)
+    sys.exit()
+
 targets = ["ath9k", "ath10k_pci", "rtwpci", "8139cp", "atlantic", "stmmac_pci", "snic"]
 if args.target == "all":
     for t in targets:
@@ -94,5 +166,10 @@ if args.target == "all":
     geo_mean = statistics.geometric_mean([target_means[t] for t in drivers])
     print(f"Ethernet drivers coverage increase geo-mean: {geo_mean}")
 else:
-    stat_one(args.target)
+	if args.raw:
+		tt= coverage_result(args.target, True, True)
+		print(tt)
+		print(f"mean {statistics.mean(tt)}")
+	else:
+		stat_one(args.target)
 
