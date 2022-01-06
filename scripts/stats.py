@@ -33,7 +33,6 @@ agamotto_resultdir = args.agamottoresult
 if 'USER' in agamotto_resultdir:
     agamotto_resultdir = agamotto_resultdir.replace('USER', os.environ.get('USER'))
 agamotto_resultdir = Path(agamotto_resultdir)
-assert agamotto_resultdir.exists()
 
 
 
@@ -150,6 +149,7 @@ def compare_agamotto(target):
     print(f"significance {statistic_significance(pvalue)} p-value {round(pvalue, 4)}")
 
 if args.agamotto:
+    assert agamotto_resultdir.exists()
     drivers = ["8139cp", "atlantic", "stmmac_pci", "snic"]
     for t in drivers:
         compare_agamotto(t)
