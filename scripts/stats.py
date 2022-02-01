@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-
 import os
 import sys
 import argparse
+import psutil
 import statistics
 from pathlib import Path
 import scipy.stats as ss
@@ -10,30 +10,32 @@ import scipy.stats as ss
 parser = argparse.ArgumentParser()
 
 parser.add_argument("--result", type=str, default="/data/USER/drifuzz", help="The directory that holds the fuzzing results")
+parser.add_argument("--usbresult", type=str, default="/data/USER/drifuzz-usb", help="The directory that holds the fuzzing results")
 parser.add_argument("--agamottoresult", type=str, default="/data/USER/agamotto", help="The directory that holds the fuzzing results")
+parser.add_argument("--usbagamottoresult", type=str, default="/data/USER/agamotto-usb", help="The directory that holds the fuzzing results")
 parser.add_argument("--target", default="all", help="The target(s) to generate graphs")
 # parser.add_argument("--out", type=Path, default=Path(__file__).parent.parent/"graphs", help="The output directory")
 parser.add_argument("--raw", default=False, action='store_true')
 parser.add_argument("--patched", default=False, action='store_true')
 parser.add_argument("--agamotto", default=False, action='store_true')
+parser.add_argument("--usb", default=False, action='store_true')
 
 args = parser.parse_args()
 
 # if not args.out.exists():
 #     os.mkdir(args.out)
 
-resultdir = args.result
-if 'USER' in resultdir:
-    resultdir = resultdir.replace('USER', os.environ.get('USER'))
-resultdir = Path(resultdir)
-assert resultdir.exists()
+def parse_dir(i):
+    res = i
+    if 'USER' in i:
+        res = i.replace('USER', os.environ.get('USER'))
+    return Path(res)
 
-
-agamotto_resultdir = args.agamottoresult
-if 'USER' in agamotto_resultdir:
-    agamotto_resultdir = agamotto_resultdir.replace('USER', os.environ.get('USER'))
-agamotto_resultdir = Path(agamotto_resultdir)
-
+resultdir = parse_dir(args.result)
+agamotto_resultdir = parse_dir(args.agamottoresult)
+drifuzz_usb_resultdir = parse_dir(args.usbresult)
+print(f"{drifuzz_usb_resultdir=}")
+agamotto_usb_resultdir = parse_dir(args.usbagamottoresult)
 
 
 settings = [
@@ -57,6 +59,18 @@ def statistic_significance(pvalue):
     else:
         return '    '
 
+gstime_min = {
+    "ath9k": 138,
+    "ath10k_pci": 25,
+    "rtwpci": 76,
+    "8139cp": 40,
+    "atlantic": 16,
+    "snic": 14,
+    "stmmac_pci": 75,
+    "ar5523": 57,
+    "mwifiex_usb": 2,
+    "rsi_usb": 3,
+}
 
 def coverage_result(target, modeled, concolic):
     def inner_dirname():
@@ -69,8 +83,7 @@ def coverage_result(target, modeled, concolic):
         else:
             return f"work-{target}-conc-model"
 
-    results = []
-    for x in resultdir.glob(f"result-{target}-{1 if concolic else 0}-{1 if modeled else 0}-*"):
+    def parse_bitmap_file(x):
         bitmap_file = x / inner_dirname() / "bitmap"
         with open(bitmap_file, 'rb') as f:
             bs = f.read()
@@ -84,16 +97,55 @@ def coverage_result(target, modeled, concolic):
                 for i in range(len(bs)):
                     if bs[i] != 0:
                         cov += 1
-            results.append(cov)
+            return cov
+    
+    def parse_eval_file(x):
+        cpu_count = psutil.cpu_count(logical=False)
+        eval_file = x / inner_dirname() / "evaluation" / "data.csv"
+        with open(eval_file, 'r') as f:
+            res = 0
+            for line in f:
+                res = int(line.split(';')[-1])
+                time = float(line.split(';')[0])
+                if modeled and time > 3600 - gstime_min[target] * 60 / cpu_count:
+                    return res
+            return res
+
+    results = []
+    for x in resultdir.glob(f"result-{target}-{1 if concolic else 0}-{1 if modeled else 0}-*"):
+        bitmap_file = x / inner_dirname() / "bitmap"
+        results.append(parse_eval_file(x))
     return results
+
+def usb_result(target):
+    def parse_eval_file(x):
+        cpu_count = psutil.cpu_count(logical=False)
+        eval_file = x / f"work-{target}-conc-model" / "evaluation" / "data.csv"
+        with open(eval_file, 'r') as f:
+            res = 0
+            for line in f:
+                res = int(line.split(';')[-1])
+                time = float(line.split(';')[0])
+                if time > 3600 - gstime_min[target] * 60 / cpu_count:
+                    return res
+            return int(res)
+
+    results = []
+    for x in drifuzz_usb_resultdir.glob(f"{target}-*"):
+        cov = parse_eval_file(x)
+        if cov:
+            results.append(cov)
+        else:
+            print(x)
+    return results
+		
 
 def compare(data, t, c ):
     # print(data[t])
     # print(data[c])
-    pvalue = ss.mannwhitneyu(data[t], data[c], alternative="greater").pvalue
+    pvalue = ss.mannwhitneyu(data[t], data[c], alternative="two-sided").pvalue
     print(f"{settings[t]} vs {settings[c]}: significance {statistic_significance(pvalue)} ;p-value {round(pvalue, 4)}")
 
-    # print(ss.mannwhitneyu(data[t], data[c], alternative="greater").pvalue)
 
 def stat_one(target):
     global target_means
@@ -108,7 +160,7 @@ def stat_one(target):
     compare(data, 3, 1)
     compare(data, 3, 0)
     mean_ratio = statistics.mean(tt) / statistics.mean(ff)
-    print(f"mean ratio {mean_ratio}")
+    print(f"mean ratio {statistics.mean(tt)}/{statistics.mean(ff)}={mean_ratio}")
     print(f"{target} & {statistics.mean(ff)} & {statistics.mean(ft)} & {statistics.mean(tf)} & {statistics.mean(tt)} & {round(mean_ratio*100-100, 1)}")
 
     target_means[target] = mean_ratio
@@ -117,6 +169,8 @@ agamotto_alias = {
     '8139cp': 'rtl8139',
     'atlantic': 'aqc100',
     'stmmac_pci': 'quark',
+    'mwifiex_usb': 'mwifiex',
+    'rsi_usb': 'rsi',
 }
 
 def parse_agamotto(target):
@@ -126,7 +180,7 @@ def parse_agamotto(target):
     for x in agamotto_resultdir.glob(f"{target}-*"):
         log_file = x / f"{target}.log"
         max_cover = 0
-        with open(log_file) as l:
+        with open(log_file, encoding='ISO-8859-1') as l:
             for line in l:
                 if 'covers' not in line:
                     continue
@@ -136,23 +190,85 @@ def parse_agamotto(target):
                 cover = int(sp[2])
                 max_cover = max(cover, max_cover)
         covers.append(max_cover)
-    print(covers)
+    return covers
+
+def parse_agamotto_usb(target):
+    if target in agamotto_alias:
+        target = agamotto_alias[target]
+    covers = []
+    for x in agamotto_usb_resultdir.glob(f"{target}-*"):
+        log_file = x / f"{x.name}.log"
+        max_cover = 0
+        with open(log_file, encoding='ISO-8859-1') as l:
+            for line in l:
+                if 'cover' not in line:
+                    continue
+                sp = line.split(' ')
+                if len(sp) != 12:
+                    continue
+                cover = int(sp[7][:-1])
+                max_cover = max(cover, max_cover)
+        covers.append(max_cover)
     return covers
 
 def compare_agamotto(target):
     print(target)
     drifuzz_result = coverage_result(target, True, True)
     agamotto_result = parse_agamotto(target)
+    print(f"{drifuzz_result} vs {agamotto_result}")
+    if not len(drifuzz_result) or not len(agamotto_result):
+        return
     mean_ratio = statistics.mean(drifuzz_result) / statistics.mean(agamotto_result)
+    print(f"mean ratio {statistics.mean(drifuzz_result)}/{statistics.mean(agamotto_result)}")
     print(f"Coverage increase {round((mean_ratio-1)*100,1)}%")
-    pvalue = ss.mannwhitneyu(drifuzz_result, agamotto_result, alternative="greater").pvalue
+    pvalue = ss.mannwhitneyu(drifuzz_result, agamotto_result, alternative="two-sided").pvalue
+    print(f"significance {statistic_significance(pvalue)} p-value {round(pvalue, 4)}")
+
+past_res = {
+    'ar5523': [
+        [62, 68, 62],
+        [47] * 2,
+    ],
+    'mwifiex_usb': [
+        [110, 110, 110],
+        [66] * 2,
+    ],
+    'rsi_usb': [
+        [271, 260, 260],
+        [76] * 2,
+    ],
+}
+
+def compare_usb(target):
+    print(target)
+    drifuzz_result = usb_result(target)
+    agamotto_result = parse_agamotto_usb(target)
+    if not len(drifuzz_result) or not len(agamotto_result):
+        return
+    if target in past_res:
+        drifuzz_result += past_res[target][0]
+        agamotto_result += past_res[target][1]
+    print(f"{drifuzz_result} vs {agamotto_result}")
+    mean_ratio = statistics.mean(drifuzz_result) / statistics.mean(agamotto_result)
+    print(f"mean ratio {statistics.mean(drifuzz_result)}/{statistics.mean(agamotto_result)}")
+    print(f"Coverage increase {round((mean_ratio-1)*100,1)}%")
+    pvalue = ss.mannwhitneyu(drifuzz_result, agamotto_result, alternative="two-sided").pvalue
     print(f"significance {statistic_significance(pvalue)} p-value {round(pvalue, 4)}")
 
 if args.agamotto:
     assert agamotto_resultdir.exists()
-    drivers = ["8139cp", "atlantic", "stmmac_pci", "snic"]
+    drivers = ["ath9k", "ath10k_pci", "rtwpci"]
+    drivers += ["8139cp", "atlantic", "stmmac_pci", "snic"]
     for t in drivers:
         compare_agamotto(t)
+    sys.exit()
+
+if args.usb:
+    assert drifuzz_usb_resultdir.exists()
+    assert agamotto_usb_resultdir.exists()
+    drivers = ['ar5523', 'mwifiex_usb', 'rsi_usb']
+    for t in drivers:
+        compare_usb(t)
     sys.exit()
 
 targets = ["ath9k", "ath10k_pci", "rtwpci", "8139cp", "atlantic", "stmmac_pci", "snic"]
