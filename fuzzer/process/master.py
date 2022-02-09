@@ -269,6 +269,8 @@ class MasterProcess:
         size = self.comm.get_master_payload_shm_size()
         fs_shm.seek(0)
         assert len(tasks) > 0
+        if len(tasks[0]) > size:
+            tasks[0] = tasks[0][:size-4]
         # input_len = to_string_32(len(tasks[i]))
         fs_shm.write(struct.pack('<I', len(tasks[0])))
         fs_shm.write(tasks[0])

@@ -4,12 +4,13 @@ from common.util import json_dumper
 
 class GlobalModel():
     
-    def __init__(self, config):
+    def __init__(self, config, load=True):
         self.config = config
         self.next_free_idx = 0
         self.read_idx:dict = {}
         self.dma_idx:dict = {}
-        self.load_data()
+        if not self.config.argument_values['naive']:
+            self.load_data()
 
     def get_read_idx(self, key, size, cnt):
         if key in self.read_idx.keys():

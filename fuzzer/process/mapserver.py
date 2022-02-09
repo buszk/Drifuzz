@@ -144,9 +144,9 @@ class MapserverProcess:
             accepted = self.treemap.append(payload, bitmap, performance=performance)
         """
         accepted = self.treemap.append(payload, bitmap, performance=performance)
+        send_msg(DRIFUZZ_NEW_INPUT, payload, self.comm.to_concolicserver_queue)
         if accepted:
             self.hash_list.add(new_hash)
-            send_msg(DRIFUZZ_NEW_INPUT, payload, self.comm.to_concolicserver_queue)
         else:
             self.shadow_map.add(new_hash)
         return accepted

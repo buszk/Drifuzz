@@ -17,11 +17,6 @@ if [ $# != 1 ];then
     exit 1
 fi
 
-if [ $# != 1 ];then 
-    echo "Usage: $0 <target>"
-    exit 1
-fi
-
 target=$1
 work=work/work-$target-conc-model
 seed=seed/seed-$target
@@ -30,12 +25,18 @@ np=$(($np/2))
 # cnp=$(($np/8))
 cnp=1
 
+image=../drifuzz-concolic/work/$target/$target.qcow2
+resultdir=../drifuzz-concolic/work
+if [ -d ../drifuzz-model-result/$target ];then
+resultdir=../drifuzz-model-result
+fi
+
 echo "$np Processes"
 echo "target: $target"
 echo "work directory: $work"
 echo "seed directory: $seed"
 
-if [ ! -f ../drifuzz-concolic/work/$target/$target.qcow2 ]; then
+if [ ! -f $image ]; then
     echo "Cannot run concolic script because concolic image for $target isn't setup"
     echo "Go to drifuzz-concolic directory and run:"
     echo "  ./snapshot_helper.py $target"
@@ -44,19 +45,18 @@ fi
 
 for i in $(seq 0 $(($cnp-1))); do
     echo ${target}_${i}.qcow2
-    cp ../drifuzz-concolic/work/$target/$target.qcow2 \
-        ../drifuzz-concolic/work/$target/${target}_${i}.qcow2
+    cp $image ../drifuzz-concolic/work/$target/${target}_${i}.qcow2
 done
 
 # Prepare work directory with globalmodule.json
 rm -rf $work
 mkdir -p $work
-cp ../drifuzz-concolic/work/$target/$target.sav $work/globalmodule.json
+cp $resultdir/$target/$target.sav $work/globalmodule.json
 
 # Prepare seed directory with initial seed
 rm -rf $seed
 mkdir -p $seed
-cp ../drifuzz-concolic/work/$target/out/0 $seed
+cp $resultdir/$target/out/0 $seed
 
 # Run fuzzing
 python3 fuzzer/drifuzz.py $USB_ARG --concolic 1 -D -p $np $seed $work $target

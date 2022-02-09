@@ -16,8 +16,7 @@ class Model(object):
 
     log_file = None
 
-    def __init__(self, parent,
-                    global_model=True):
+    def __init__(self, parent):
         self.slave = parent
         self.log_file = open('rw.log', 'w')
         self.next_free_idx = 0
@@ -27,7 +26,6 @@ class Model(object):
         self.read_idx:dict = {}
         self.dma_cnt:dict = {}
         self.dma_idx:dict = {}
-        self.use_global_model = global_model
 
     def __del__(self):
         self.log_file.close()
@@ -108,7 +106,7 @@ class Model(object):
             idx = self.slave.req_read_idx(k, size, n)
             self.read_idx[k] = [idx]
             ret = self.get_data_by_size(size, idx)
-        self.log_file.write("[%.4f] idx %x n %d :%d %d %d\n" % (time.time(), idx, n, k[0], k[1], k[2]))
+        self.log_file.write("[%.4f] idx %x n %d :%d %d %d\n" % (0.0, idx, n, k[0], k[1], k[2]))
         return ret, idx
     
     def get_dma_data_by_model(self, k, size, reuse=True):
@@ -142,17 +140,17 @@ class Model(object):
 
     def handle_write(self, region, addr, size, val):
         # self.log.append("write #%d[%lx][%d] =  %x" % (region, addr, size, val))
-        self.log_file.write("[%.4f] write #%d[%lx][%d] =  %x\n" % (time.time(), region, addr, size, val))
+        self.log_file.write("[%.4f] write #%d[%lx][%d] =  %x\n" % (0.0, region, addr, size, val))
 
     def handle_read(self, region, addr, size):
         k = (region, addr, size)
         ret, idx = self.get_read_data(k, size)
-        self.log_file.write("[%.4f] read  #%d[%lx][%d] as %x\n" % (time.time(), region, addr, size, ret))
+        self.log_file.write("[%.4f] read  #%d[%lx][%d] as %x\n" % (0.0, region, addr, size, ret))
         return (ret, idx,)
     
     def handle_dma_buf(self, size):
         ret, idx = self.get_dma_data(size)
-        self.log_file.write("[%.4f] dma_buf [%x]\n" % (time.time(), size))
+        self.log_file.write("[%.4f] dma_buf [%x] as %s\n" % (0.0, size, ret.hex()))
         return (ret, idx)
 
     def handle_reset(self):
@@ -160,7 +158,7 @@ class Model(object):
         pass
 
     def handle_exec_init(self):
-        self.init_time = time.time()
+        self.init_time = 0.0
         self.log = []
         # print("requesting payload")
         self.payload:bytearray = self.slave.fetch_payload()
@@ -174,7 +172,7 @@ class Model(object):
         return (0,)
 
     def __submit_case(self, kasan=False, timeout=False):
-        elapsed = time.time() - self.init_time
+        elapsed = 0.0 - self.init_time
         # print("Time spent:", elapsed)
         self.slave.send_bitmap(perf=elapsed, kasan=kasan, timeout=timeout, payload=self.payload)
 

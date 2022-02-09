@@ -58,6 +58,7 @@ class SlaveThread(threading.Thread):
         self._qemu_ready = False
 
         self.reproduce = self.config.argument_values['reproduce']
+        self.N = self.config.argument_values['reproducetime']
 
         self.globalmodel = None
         if self.reproduce:
@@ -74,11 +75,14 @@ class SlaveThread(threading.Thread):
         if self.global_bitmap:
             self.global_bitmap.close()
 
-    def exit_if_reproduce(self):
+    def exit_if_reproduce(self, count=True):
         if self.reproduce:
             print("Reproducing case. Stop here")
-            self.stop()
-            self.comm.stop()
+            if count:
+                self.N -= 1
+            if self.N <= 0:
+                self.stop()
+                self.comm.stop()
             return True
         return False
 
@@ -100,7 +104,7 @@ class SlaveThread(threading.Thread):
             self.q = qemu(self.slave_id, self.comm.files[2], self.comm.qemu_socket_prefix, config=self.config)
             self.q.start(verbose=v, gdb=g)
             # Wait for 20s to check if qemu is ready
-            for _ in range(20):
+            for _ in range(40):
                 if self.stopped():
                     return
                 time.sleep(1)
@@ -110,7 +114,7 @@ class SlaveThread(threading.Thread):
     def restart_vm(self, reuse=False):
         log_slave(f"restarting vm reuse={reuse}", self.slave_id)
 
-        if not reuse and self.exit_if_reproduce():
+        if not reuse and self.exit_if_reproduce(count=False):
             return
 
         # Consume the idx_sem if it is released

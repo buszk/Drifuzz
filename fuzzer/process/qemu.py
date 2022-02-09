@@ -38,7 +38,6 @@ from os.path import dirname, join
 # from common.util import Singleton
 from multiprocessing import Process, Manager
 
-
 def to_string_32(value):
     return chr((value >> 24) & 0xff) + \
            chr((value >> 16) & 0xff) + \
@@ -68,14 +67,14 @@ class qemu:
                     f"{drifuzz_path}/panda-build/x86_64-softmmu/panda-system-x86_64",
                     "-hda", f"{drifuzz_path}/image/buster.img",
                     "-kernel", f"{drifuzz_path}/linux-module-build/arch/x86_64/boot/bzImage",
-                    "-append", "console=ttyS0 nokaslr root=/dev/sda earlyprintk=serial net.ifnames=0 modprobe.blacklist=%s" % target,
+                    "-append", "console=ttyS0 nokaslr root=/dev/sda earlyprintk=serial net.ifnames=0 modprobe.blacklist=e1000,%s" % target,
                     "-snapshot",
                     "-enable-kvm",
                     "-k", "de",
                     "-m", "1G",
                     "-nographic",
-                    "-net", "user",
-                    "-net", "nic,model=%s" % target,
+                    # "-net", "user",
+                    # "-net", "nic,model=%s" % target,
                     "-machine", "kernel-irqchip=off",
                     "-device", "drifuzz,bitmap=" + self.bitmap_filename + \
                         ",bitmap_size=" + str(self.bitmap_size) + \
@@ -83,6 +82,15 @@ class qemu:
                         ",timeout=" + str(self.config.argument_values['timeout']) + \
                         ",target=%s" % target + \
                         ",prog=init"]
+        if self.config.argument_values['usb']:
+            self.cmd += ['-usb']
+            self.cmd += ['-device', 'qemu-xhci,id=xhci']
+            self.cmd += ['-device', target]
+            self.cmd += ['-usbDescFile', '/home/buszk/DrifuzzRepo/drifuzz-concolic/random_seed']
+            self.cmd += ['-usbDataFile', '/dev/urandom']
+        else:
+            self.cmd += ["-net", "user"]
+            self.cmd += ["-net", "nic,model=%s" % target]
         # self.cmd = ["gdb", "-ex", "handle SIGUSR1 nostop noprint", "-ex", "r", "--args"] +\
         #         self.cmd
         self.kafl_shm_f = None

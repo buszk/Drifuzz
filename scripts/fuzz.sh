@@ -5,10 +5,10 @@ targets=(
     "ath9k"
     "ath10k_pci"
     "rtwpci"
-    "8139cp"
-    "atlantic"
-    "snic"
-    "stmmac_pci"
+#    "8139cp"
+#    "atlantic"
+#    "snic"
+#    "stmmac_pci"
 )
 data_dir=/data/$USER/drifuzz
 
@@ -23,7 +23,7 @@ for iteration in $(seq $num_trial); do
             continue
         fi
         if [ $concolic -eq 1 ]; then
-            echo "Creating snapshot"
+            echo "Creating snapshot: iter $iteration"
             (cd ../drifuzz-concolic && ./snapshot_helper.py $target &> ~/snapshot_creation.log)
         fi
 

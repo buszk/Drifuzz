@@ -12,11 +12,12 @@ import shutil
 from os.path import dirname, realpath, join
 
 class ConcolicWorker(threading.Thread):
-    def __init__(self, comm, target, payload, model, concolic_id, nproc, log, work_dir):
+    def __init__(self, comm, target, usb, payload, model, concolic_id, nproc, log, work_dir):
         threading.Thread.__init__(self)
         self.comm = comm
         self.model = model
         self.target = target
+        self.usb = usb
         self.concolic_id = concolic_id
         self.slave_id = nproc + concolic_id
         self._stop_event = threading.Event()
@@ -60,6 +61,8 @@ class ConcolicWorker(threading.Thread):
                 # '--pincpu', f'{2*self.concolic_id},{2*self.concolic_id+1}',
                 '--socket', self.comm.qemu_socket_prefix + str(self.slave_id)
                 ]
+        if self.usb:
+            cmd += ['--usb']
         p = subprocess.Popen(cmd,
                             stdin=subprocess.DEVNULL,
                             stdout=self.log,
@@ -194,7 +197,7 @@ class ConcolicServerThread(threading.Thread):
     def run_concolic(self, payload):
         log_concolicserver(f"Creating concolic worker on queue {self.current}")
         worker_thread = ConcolicWorker(
-            self.comm, self.target, payload,
+            self.comm, self.target, self.config.argument_values['usb'], payload,
             self.models[self.current], self.current, self.nproc,
             self.logs[self.current], self.work_dir)
         self.workers.append(worker_thread)

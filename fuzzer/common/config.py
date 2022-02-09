@@ -237,6 +237,8 @@ class FuzzerConfiguration:
                             help='Set fuzzing exectioin timeout')
         parser.add_argument('--concolic', default=0, type=int,
                             help='number of concolic threads')
+        parser.add_argument('--usb', default=False, action="store_true",
+                            help='whether this is usb target')
 
         parser.add_argument('-p', required=False, metavar='<Process Number>', help='number of worker processes to start.', default=1, type=int)
         parser.add_argument('-t', required=False, metavar='<Task Number>', help='tasks per worker request to provide.', default=1, type=int)
@@ -264,6 +266,8 @@ class FuzzerConfiguration:
         parser.add_argument('-f', required=False, help='disable fancy UI', action='store_false', default=True)
         # parser.add_argument('-n', required=False, help='disable filter sampling', action='store_false', default=True)
         parser.add_argument('-l', required=False, help='enable UI log output', action='store_true', default=False)
+        parser.add_argument('--naive', default=False, action='store_true', help='use the naive input feeding method')
+        parser.add_argument('--reproducetime', default=1, type=int )
 
         self.argument_values = vars(parser.parse_args())
 

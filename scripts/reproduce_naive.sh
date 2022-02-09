@@ -1,11 +1,11 @@
 #!/bin/bash
 
-USB_ARG=
+FLAT=0
 N=1
 while :; do
     case $1 in
-        --usb)
-            USB_ARG=$1
+        --flat)
+            FLAT=1
             shift
         ;;
         --n)
@@ -26,11 +26,14 @@ target=$1
 work=$2
 input=$3
 
-if [ -f $work/$target.sav ] && ! [ -f $work/globalmodule.json ]; then
-    cp $work/$target.sav $work/globalmodule.json
-fi
-
-for i in `seq $N`; do
-    python3 fuzzer/reproduce.py $USB_ARG --reproduce $input seed/seed-random $work $target
+if [ "$FLAT" -eq 1 ]; then
+    python3 fuzzer/reproduce.py --reproduce $input seed/seed-random $work $target
     stty sane
+    scripts/flat_seed.py
+    mv rw.log rw.log.1
+fi
+for i in `seq $N`; do
+    python3 fuzzer/reproduce.py --naive --reproduce flat.inp seed/seed-random $work $target
+    stty sane
+    mv rw.log rw.log.2
 done
