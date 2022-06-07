@@ -5,17 +5,22 @@ targets=(
     "ath9k"
     "ath10k_pci"
     "rtwpci"
-#    "8139cp"
-#    "atlantic"
-#    "snic"
-#    "stmmac_pci"
+    "8139cp"
+    "atlantic"
+    "snic"
+    "stmmac_pci"
 )
 data_dir=/data/$USER/drifuzz
-
-concolic=1
-model=1
-
-
+concolic_settings=(
+    0
+    1
+)
+model_settings=(
+    0
+    1
+)
+for concolic in ${concolic_settings[*]}; do
+for model in ${model_settings[*]}; do
 for iteration in $(seq $num_trial); do
     for target in ${targets[*]}; do
         resdir=result-${target}-${concolic}-${model}-${iteration}
@@ -59,5 +64,6 @@ for iteration in $(seq $num_trial); do
 
         mv work $data_dir/$resdir
     done
-
+done
+done
 done
