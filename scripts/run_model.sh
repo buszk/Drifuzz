@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ $# != 1 ];then 
+if [ $# != 1 ];then
     echo "Usage: $0 <target>"
     exit 1
 fi
@@ -16,16 +16,21 @@ echo "target: $target"
 echo "work directory: $work"
 echo "seed directory: $seed"
 
+resultdir=../drifuzz-concolic/work
+if [ -d ../drifuzz-model-result/$target ];then
+resultdir=../drifuzz-model-result
+fi
+
 # Prepare work directory with globalmodule.json
 rm -rf $work
 mkdir -p $work
-cp ../drifuzz-concolic/work/$target/$target.sav $work/globalmodule.json
+cp $resultdir/$target/$target.sav $work/globalmodule.json
 
 # Prepare seed directory with initial seed
 rm -rf $seed
 mkdir -p $seed
-cp ../drifuzz-concolic/work/$target/out/0 $seed
+cp $resultdir/$target/out/0 $seed
 
 # Run fuzzing
-python3 fuzzer/drifuzz.py -D -p $np $seed $work $target 
+python3 fuzzer/drifuzz.py -D -p $np $seed $work $target
 stty sane
